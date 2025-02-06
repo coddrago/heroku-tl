@@ -1,4 +1,4 @@
-This fork is being maintained following the specific needs of [Hikka userbot](https://github.com/hikariatama/Hikka).
+This fork is being maintained following the specific needs of [Heroku userbot](https://github.com/coddrago/Heroku).
 
 Telethon
 ========
