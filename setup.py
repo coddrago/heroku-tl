@@ -195,7 +195,7 @@ def main(argv):
         run('python3 setup.py sdist', shell=True)
         run('python3 setup.py bdist_wheel', shell=True)
         run('twine upload dist/*', shell=True)
-        for x in ('build', 'dist', 'Hikka-TL.egg-info'):
+        for x in ('build', 'dist', 'Heroku-TL.egg-info'):
             shutil.rmtree(x, ignore_errors=True)
 
     else:
@@ -216,8 +216,8 @@ def main(argv):
             description="Full-featured Telegram client library for Python 3",
             long_description=long_description,
 
-            url='https://github.com/Plovchikdeval/heroku-tl',
-            download_url='https://github.com/Plovchikdeval/heroku-TL/releases',
+            url='https://github.com/coddrago/heroku-tl',
+            download_url='https://pypi.org/project/Heroku-TL/',
 
             author='Codrago',
             author_email='codrago@codrago.top',
