@@ -178,3 +178,11 @@ class MultiError(Exception):
         self.results = list(result)
         self.requests = list(requests)
         return self
+
+class ScamDetectionError(Exception):
+    """Exception for scam detection"""
+    def __init__(self, error_message: str):
+        self._error = error_message
+
+    def __str__(self) -> str:
+        return self._error

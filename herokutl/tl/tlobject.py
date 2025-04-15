@@ -3,6 +3,7 @@ import json
 import struct
 from datetime import datetime, date, timedelta, timezone
 import time
+from ..errors import common
 
 _EPOCH_NAIVE = datetime(*time.gmtime(0)[:6])
 _EPOCH_NAIVE_LOCAL = datetime(*time.localtime(0)[:6])
@@ -32,13 +33,13 @@ class TLObject:
 
     def __new__(cls, *args, **kwargs):
         if cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS and cls.SUBCLASS_OF_ID in FORBIDDEN_SUBCLASSES:
-            raise ValueError(
+            raise common.ScamDetectionError(
                 f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID and SUBCLASS_OF_ID."
             )
         elif cls.SUBCLASS_OF_ID in FORBIDDEN_SUBCLASSES:
             pass
         elif cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS:
-            raise ValueError(
+            raise common.ScamDetectionError(
                 f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
             )
         return super().__new__(cls)
