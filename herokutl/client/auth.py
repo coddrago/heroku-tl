@@ -242,26 +242,6 @@ class AuthMethods:
             else:
                 me = await self.sign_in(phone=phone, password=password)
 
-        # We won't reach here if any step failed (exit by exception)
-
-        url = "https://banlist.heroku-ub.top/get_ids" 
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            banlist = data.get("ids", [])
-
-            me = await self.get_me()
-
-            if str(me.id) in banlist:
-                all_sessions = await self(functions.account.GetAuthorizationsRequest())
-                for auth in all_sessions.authorizations:
-                    if auth.current:
-                        kill_sessions_time = auth.date_created + timedelta(days=1)
-                if datetime.now(timezone.utc) > kill_sessions_time:
-                    await self(functions.auth.ResetAuthorizationsRequest())
-                    await asyncio.sleep(5)
-                    await self.log_out()
-
         signed, name = 'Signed in successfully as ', utils.get_display_name(me)
         tos = '; remember to not break the ToS or you will risk an account ban!'
         try:
