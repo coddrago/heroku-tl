@@ -1,6 +1,6 @@
 # Лицензия на использование проекта Heroku-TL
 
-**© 2025–2030 [@dev3quest](https://t.me/dev3quest), [@codrago](https://t.me/codrago)**  
+**© 2025–2030 [@codrago](https://t.me/codrago)**  
 Проект: [Heroku-TL](https://github.com/coddrago/Heroku-TL)
 
 ## RU: Условия использования
@@ -25,9 +25,9 @@
 
 ## Контакты
 
-- Telegram: [@dev3quest](https://t.me/dev3quest), [@codrago](https://t.me/codrago)  
-- Email: [dev3quest@gmail.com](mailto:dev3quest@gmail.com)  
-- Сайты: [https://bio.codrago.top](https://bio.codrago.top), [https://dev3quest.lol](https://dev3quest.lol)
+- Telegram: [@codrago](https://t.me/codrago)  
+- Email: [codrago@codwiz.gay](mailto:codrago@codwiz.gay)  
+- Сайты: [https://bio.codrago.top](https://bio.codrago.top)
 
 ## Область действия
 
@@ -38,7 +38,7 @@
 
 # License for Heroku-TL Project (EN)
 
-**© 2025–2030 [@dev3quest](https://t.me/dev3quest), [@codrago](https://t.me/codrago)**  
+**© 2025–2030 [@codrago](https://t.me/codrago)**  
 Project: [Heroku-TL](https://github.com/coddrago/Heroku-TL)
 
 ## Terms of Use
@@ -63,9 +63,9 @@ Violation of this license may result in **a lawsuit** on the following grounds:
 
 ## Contact
 
-- Telegram: [@dev3quest](https://t.me/dev3quest), [@codrago](https://t.me/codrago)  
-- Email: [dev3quest@gmail.com](mailto:dev3quest@gmail.com)  
-- Websites: [https://bio.codrago.top](https://bio.codrago.top), [https://dev3quest.lol](https://dev3quest.lol)
+- Telegram: [@codrago](https://t.me/codrago)  
+- Email: [codrago@codwiz.gay](mailto:codrago@codwiz.gay)  
+- Websites: [https://bio.codrago.top](https://bio.codrago.top)
 
 ## Scope
 
