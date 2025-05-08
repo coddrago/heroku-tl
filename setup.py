@@ -215,6 +215,7 @@ def main(argv):
             version=version,
             description="This library is built for the Heroku userbot and is based on Telethon.",
             long_description=long_description,
+            long_description_content_type="text/markdown",
 
             url='https://github.com/coddrago/heroku-tl',
             download_url='https://pypi.org/project/heroku-tl-new/',
