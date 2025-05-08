@@ -1,4 +1,4 @@
-Telethon
+Heroku-tl
 ========
 .. epigraph::
 
@@ -29,7 +29,7 @@ Installing
 
 .. code-block:: sh
 
-  pip3 install telethon
+  pip3 install heroku-tl-new
 
 
 Creating a client
@@ -37,7 +37,7 @@ Creating a client
 
 .. code-block:: python
 
-    from telethon import TelegramClient, events, sync
+    from herokutl import TelegramClient, events, sync
 
     # These example values won't work. You must get your own api_id and
     # api_hash from https://my.telegram.org, under API Development.
