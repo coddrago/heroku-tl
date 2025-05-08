@@ -1,4 +1,4 @@
-Heroku-tl
+Herokutl
 ========
 .. epigraph::
 
