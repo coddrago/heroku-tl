@@ -1256,6 +1256,34 @@ class Message(ChatGetter, SenderGetter, TLObject):
                 add_to_recent=add_to_recent,
             )
 
+    async def link(
+            self,
+            grouped: bool = False,
+            thread: bool = True,
+    ):
+        """
+        Gets link of the given message. Shorthand for
+        `telethon.functions.channels.ExportMessageLinkRequest`
+        with ``channel`` and ``id`` already set.
+        """
+        if self._client:
+            channel = await self.get_input_chat()
+            if isinstance(channel, types.InputPeerChannel):
+                return (await self._client(
+                    functions.channels.ExportMessageLinkRequest(
+                        channel,
+                        self.id,
+                        grouped=grouped,
+                        thread=thread,
+                    )
+                )).link
+            
+            # it's not really necessary - these hyperlinks only work on Android clients, but we'll keep it anyway ¯\_(ツ)_/¯
+            elif isinstance(channel, types.InputPeerUser):
+                return f"tg://openmessage?user_id={self.chat_id}&message_id={self.id}"
+            elif isinstance(channel, types.InputPeerChat):
+                return f"tg://openmessage?chat_id={self.chat_id}&message_id={self.id}"
+
     # endregion Public Methods
 
     # region Private Methods
