@@ -1259,7 +1259,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
     async def link(
             self,
             grouped: bool = False,
-            thread: bool = True,
+            thread: bool = False,
     ):
         """
         Gets link of the given message. Shorthand for
