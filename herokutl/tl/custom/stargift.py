@@ -1,9 +1,11 @@
-from ...client import TelegramClient
 from ..types import TypeStarGift, TypePeer, TypeTextWithEntities, SavedStarGift, StarGiftUnique
 from ..types.payments import PaymentResult
 
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from ...client import TelegramClient
 
 class StarGift:
 
