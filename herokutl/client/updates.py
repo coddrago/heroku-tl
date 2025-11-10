@@ -343,7 +343,8 @@ class UpdateMethods:
                     if updates:
                         self._log[__name__].info('Got difference for account updates')
 
-                    updates_to_dispatch.extend(self._preprocess_updates(updates, users, chats))
+                    _preprocess_updates = self._preprocess_updates(updates, users, chats)
+                    updates_to_dispatch.extend(_preprocess_updates)
                     continue
 
                 get_diff = self._message_box.get_channel_difference(self._mb_entity_cache)
@@ -441,7 +442,8 @@ class UpdateMethods:
                     if updates:
                         self._log[__name__].info('Got difference for channel %d updates', get_diff.channel.channel_id)
 
-                    updates_to_dispatch.extend(self._preprocess_updates(updates, users, chats))
+                    _preprocess_updates = self._preprocess_updates(updates, users, chats)
+                    updates_to_dispatch.extend(_preprocess_updates)
                     continue
 
                 deadline = self._message_box.check_deadlines()
@@ -462,7 +464,8 @@ class UpdateMethods:
                 except GapError:
                     continue  # get(_channel)_difference will start returning requests
 
-                updates_to_dispatch.extend(self._preprocess_updates(processed, users, chats))
+                _preprocess_updates = self._preprocess_updates(processed, users, chats)
+                updates_to_dispatch.extend(_preprocess_updates)
         except asyncio.CancelledError:
             pass
         except Exception as e:

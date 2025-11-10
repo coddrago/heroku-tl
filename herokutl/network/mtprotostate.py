@@ -1,18 +1,17 @@
 import os
 import struct
 import time
-from hashlib import sha256
+from hashlib import sha1, sha256
 from collections import deque
 
-from ..crypto import AES
+from ..crypto import AES, AuthKey
 from ..errors import SecurityError, InvalidBufferError
 from ..extensions import BinaryReader
 from ..tl.core import TLMessage
 from ..tl.tlobject import TLRequest
 from ..tl.functions import InvokeAfterMsgRequest
 from ..tl.core.gzippacked import GzipPacked
-from ..tl.types import BadServerSalt, BadMsgNotification
-
+from ..tl.types import BadServerSalt, BadMsgNotification, BindAuthKeyInner
 
 # N is not  specified in https://core.telegram.org/mtproto/security_guidelines#checking-msg-id, but 500 is reasonable
 MAX_RECENT_MSG_IDS = 500
@@ -71,10 +70,12 @@ class MTProtoState:
         self._ignore_count = 0
         self.reset()
 
-    def reset(self):
+    def reset(self, keep_key=False):
         """
         Resets the state.
         """
+        self._log.debug('MtProtoState reset')
+
         # Session IDs can be random on every connection
         self.id = struct.unpack('q', os.urandom(8))[0]
         self._sequence = 0
@@ -82,6 +83,10 @@ class MTProtoState:
         self._recent_remote_ids.clear()
         self._highest_remote_id = 0
         self._ignore_count = 0
+
+        if not keep_key:
+            self.auth_key = AuthKey(None)
+            self._log.debug('MtProtoState key reset')
 
     def update_message_id(self, message):
         """
@@ -106,14 +111,38 @@ class MTProtoState:
 
         return aes_key, aes_iv
 
+    @staticmethod
+    def _calc_key_v1(auth_key, msg_key, client):
+        """
+        Calculate the key based on Telegram guidelines for MTProto 1,
+        specifying whether it's the client or not. See
+        https://core.telegram.org/mtproto/description_v1#defining-aes-key-and-initialization-vector
+        """
+        x = 0 if client else 8
+
+        sha1a = sha1(msg_key + auth_key[x:x+32]).digest()
+        sha1b = sha1(auth_key[x+32:x+48] + msg_key + auth_key[x+48:x+64]).digest()
+        sha1c = sha1(auth_key[x+64:x+96] + msg_key).digest()
+        sha1d = sha1(msg_key + auth_key[x+96:x+128]).digest()
+
+        aes_key = sha1a[0:8] + sha1b[8:20] + sha1c[4:16]
+        aes_iv = sha1a[8:20] + sha1b[0:8] + sha1c[16:20] + sha1d[0:8]
+
+        return aes_key, aes_iv
+
     def write_data_as_message(self, buffer, data, content_related,
-                              *, after_id=None):
+                              *, after_id=None, msg_id=None):
         """
         Writes a message containing the given data into buffer.
 
         Returns the message id.
         """
-        msg_id = self._get_new_msg_id()
+        if msg_id is None:
+            # this should be the default - the binding of a tmpAuthKey is the only
+            # exception, as the msg_id of the encrypted BindAuthKeyInner needs to be equal to the
+            # msg_id of the outer message
+            # see: https://core.telegram.org/method/auth.bindTempAuthKey#encrypting-the-binding-message
+            msg_id = self._get_new_msg_id()
         seq_no = self._get_seq_no(content_related)
         if after_id is None:
             body = GzipPacked.gzip_if_smaller(content_related, data)
@@ -126,6 +155,34 @@ class MTProtoState:
         buffer.write(struct.pack('<qii', msg_id, seq_no, len(body)))
         buffer.write(body)
         return msg_id
+
+    def get_encrypted_bind(self, nonce, auth_key, tmp_auth_key, timestamp):
+        # strangely, this should be encrypted using MTProto1
+        # see https://core.telegram.org/method/auth.bindTempAuthKey#encrypting-the-binding-message
+        msg_id = self._get_new_msg_id()
+        seq_no = 0
+        bind = BindAuthKeyInner(
+            nonce=nonce,
+            temp_auth_key_id=tmp_auth_key.key_id,
+            perm_auth_key_id=auth_key.key_id,
+            temp_session_id=self.id,
+            expires_at=timestamp
+        )
+        bind = bytes(bind)
+        assert len(bind) == 40
+
+        # 128 bit random + msg_id + seq_no + len(bind) + bind
+        payload = os.urandom(128//8) + struct.pack('<qii', msg_id, seq_no, len(bind)) + bind
+        # 16-byte alignment
+        padding = os.urandom(len(payload) % 16)
+
+        msg_key = sha1(payload).digest()[4:20]
+        aes_key, aes_iv = self._calc_key_v1(auth_key.key, msg_key, True)
+        key_id = struct.pack('<q', auth_key.key_id)
+        crypt = AES.encrypt_ige(payload + padding, aes_key, aes_iv)
+        encrypted_message = (key_id + msg_key + crypt)
+
+        return encrypted_message, msg_id
 
     def encrypt_message_data(self, data):
         """
@@ -144,7 +201,7 @@ class MTProtoState:
         msg_key = msg_key_large[8:24]
         aes_key, aes_iv = self._calc_key(self.auth_key.key, msg_key, True)
 
-        key_id = struct.pack('<Q', self.auth_key.key_id)
+        key_id = struct.pack('<q', self.auth_key.key_id)
         return (key_id + msg_key +
                 AES.encrypt_ige(data + padding, aes_key, aes_iv))
 
@@ -158,7 +215,7 @@ class MTProtoState:
             raise InvalidBufferError(body)
 
         # TODO Check salt, session_id and sequence_number
-        key_id = struct.unpack('<Q', body[:8])[0]
+        key_id = struct.unpack('<q', body[:8])[0]
         if key_id != self.auth_key.key_id:
             raise SecurityError('Server replied with an invalid auth key')
 

@@ -218,7 +218,6 @@ class _ParticipantsIter(RequestIter):
         self.requests.offset += len(participants.participants)
         users = {user.id: user for user in participants.users}
         for participant in participants.participants:
-
             if isinstance(participant, types.ChannelParticipantLeft):
                 # See issue #3231 to learn why this is ignored.
                 continue

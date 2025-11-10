@@ -12,13 +12,16 @@ class AuthKey:
     Represents an authorization key, used to encrypt and decrypt
     messages sent to Telegram's data centers.
     """
-    def __init__(self, data):
+    def __init__(self, data, expires_at: int = -1):
         """
         Initializes a new authorization key.
 
         :param data: the data in bytes that represent this auth key.
+        :param expires_at: unix timestamp of key expiry
         """
         self.key = data
+        self.expires_at = expires_at
+        self.tmp_key_bound = False
 
     @property
     def key(self):
@@ -39,7 +42,7 @@ class AuthKey:
         with BinaryReader(sha1(self._key).digest()) as reader:
             self.aux_hash = reader.read_long(signed=False)
             reader.read(4)
-            self.key_id = reader.read_long(signed=False)
+            self.key_id = reader.read_long(signed=True)
 
     # TODO This doesn't really fit here, it's only used in authentication
     def calc_new_nonce_hash(self, new_nonce, number):

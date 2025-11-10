@@ -13,6 +13,22 @@ it can take advantage of new goodies!
 
 .. contents:: List of All Versions
 
+New layer (v1.42)
+=================
+
++------------------------+
+| Scheme layer used: 216 |
++------------------------+
+
+`View new and changed raw API methods <https://diff.telethon.dev/?from=214&to=216>`__.
+
+Bug fixes
+~~~~~~~~~
+
+* Fixed support for Python 3.14.
+* Removed potential misuse when downloading files using inferred path.
+
+
 New layer (v1.41)
 =================
 

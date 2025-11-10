@@ -47,7 +47,7 @@ class MTProtoSender:
     """
     def __init__(self, auth_key, *, loggers,
                  retries=5, delay=1, auto_reconnect=True, connect_timeout=None,
-                 auth_key_callback=None,
+                 auth_key_callback=None, tmp_auth_key=None, tmp_auth_key_callback=None,
                  updates_queue=None, auto_reconnect_callback=None):
         self._connection = None
         self._loggers = loggers
@@ -57,6 +57,7 @@ class MTProtoSender:
         self._auto_reconnect = auto_reconnect
         self._connect_timeout = connect_timeout
         self._auth_key_callback = auth_key_callback
+        self._tmp_auth_key_callback = tmp_auth_key_callback
         self._updates_queue = updates_queue
         self._auto_reconnect_callback = auto_reconnect_callback
         self._connect_lock = asyncio.Lock()
@@ -70,8 +71,7 @@ class MTProtoSender:
         # pending futures should be cancelled.
         self._user_connected = False
         self._reconnecting = False
-        self._disconnected = helpers.get_running_loop().create_future()
-        self._disconnected.set_result(None)
+        self.__disconnected = None
 
         # We need to join the loops upon disconnection
         self._send_loop_handle = None
@@ -79,7 +79,8 @@ class MTProtoSender:
 
         # Preserving the references of the AuthKey and state is important
         self.auth_key = auth_key or AuthKey(None)
-        self._state = MTProtoState(self.auth_key, loggers=self._loggers)
+        self.tmp_auth_key = tmp_auth_key or AuthKey(None)
+        self._state = MTProtoState(self.tmp_auth_key, loggers=self._loggers)
 
         # Outgoing messages are put in a queue and sent in a batch.
         # Note that here we're also storing their ``_RequestState``.
@@ -152,7 +153,7 @@ class MTProtoSender:
         """
         await self._disconnect()
 
-    def send(self, request, ordered=False):
+    def send(self, request, ordered=False, msg_id=None):
         """
         This method enqueues the given request to be sent. Its send
         state will be saved until a response arrives, and a ``Future``
@@ -180,7 +181,7 @@ class MTProtoSender:
 
         if not utils.is_list_like(request):
             try:
-                state = RequestState(request)
+                state = RequestState(request, msg_id=msg_id)
             except struct.error as e:
                 # "struct.error: required argument is not an integer" is not
                 # very helpful; log the request to find out what wasn't int.
@@ -216,6 +217,13 @@ class MTProtoSender:
         or any other unexpected error that could not be handled.
         """
         return asyncio.shield(self._disconnected)
+
+    @property
+    def _disconnected(self):
+        if self.__disconnected is None:
+            self.__disconnected = helpers.get_running_loop().create_future()
+            self.__disconnected.set_result(None)
+        return self.__disconnected
 
     # Private methods
 
@@ -254,6 +262,25 @@ class MTProtoSender:
                     await asyncio.sleep(self._delay)
                     continue  # next iteration we will try to reconnect
 
+            if not self.tmp_auth_key:
+                # establish tmp_auth_key here, but make sure to bind to the auth_key later
+                try:
+                    if not await self._try_gen_tmp_auth_key(attempt):
+                        continue  # keep retrying until we have the tmp auth key
+                except (IOError, asyncio.TimeoutError) as e:
+                    # Sometimes, specially during user-DC migrations,
+                    # Telegram may close the connection during auth_key
+                    # generation. If that's the case, we will need to
+                    # connect again.
+                    self._log.warning('Connection error %d during tmp_auth_key gen: %s: %s',
+                                      attempt, type(e).__name__, e)
+
+                    # Whatever the IOError was, make sure to disconnect so we can
+                    # reconnect cleanly after.
+                    await self._connection.disconnect()
+                    connected = False
+                    await asyncio.sleep(self._delay)
+                    continue  # next iteration we will try to reconnect
             break  # all steps done, break retry loop
         else:
             if not connected:
@@ -264,17 +291,23 @@ class MTProtoSender:
             raise e
 
         loop = helpers.get_running_loop()
+        # dirty hack, but otherwise we cannot send the binding of the tmp_auth_key
+        self._user_connected = True
+        # update key, this was unavailable at init of self._state
+        self._state.auth_key = self.tmp_auth_key
         self._log.debug('Starting send loop')
         self._send_loop_handle = loop.create_task(self._send_loop())
 
         self._log.debug('Starting receive loop')
         self._recv_loop_handle = loop.create_task(self._recv_loop())
 
-        # _disconnected only completes after manual disconnection
-        # or errors after which the sender cannot continue such
-        # as failing to reconnect or any unexpected error.
+        # both self.auth_key and self.tmp_auth_key are required for the binding
+        # and it can only take place after the send/recv loops as the
+        # the binding message needs to be sent encrypted
+        await authenticator.bind_tmp_auth_key(self, self.auth_key, self.tmp_auth_key)
+
         if self._disconnected.done():
-            self._disconnected = loop.create_future()
+            self.__disconnected = loop.create_future()
 
         self._log.info('Connection to %s complete!', self._connection)
 
@@ -290,6 +323,27 @@ class MTProtoSender:
             await asyncio.sleep(self._delay)
             return False
 
+    async def _try_gen_tmp_auth_key(self, attempt):
+        plain = MTProtoPlainSender(self._connection, loggers=self._loggers)
+        try:
+            self._log.debug('New tmp_auth_key attempt %d...', attempt)
+            self.tmp_auth_key.key, self.tmp_auth_key.expires_at = \
+                await authenticator.do_authentication(plain, tmp_auth_key=True)
+
+            # This is *EXTREMELY* important since we don't control
+            # external references to the temporary authorization key, we must
+            # notify whenever we change it. This is crucial when we
+            # switch to different data centers.
+            if self._tmp_auth_key_callback:
+                self._tmp_auth_key_callback(self.tmp_auth_key)
+
+            self._log.info('tmp_auth_key generation success!')
+            return True
+        except (SecurityError, AssertionError) as e:
+            self._log.warning('Attempt %d at new tmp_auth_key failed: %s', attempt, e)
+            await asyncio.sleep(self._delay)
+            return False
+
     async def _try_gen_auth_key(self, attempt):
         plain = MTProtoPlainSender(self._connection, loggers=self._loggers)
         try:
@@ -302,7 +356,7 @@ class MTProtoSender:
             # notify whenever we change it. This is crucial when we
             # switch to different data centers.
             if self._auth_key_callback:
-                self._auth_key_callback(self.auth_key)
+                await self._auth_key_callback(self.auth_key)
 
             self._log.debug('auth_key generation success!')
             return True
@@ -366,7 +420,10 @@ class MTProtoSender:
         self._reconnecting = False
 
         # Start with a clean state (and thus session ID) to avoid old msgs
-        self._state.reset()
+        self._state.reset(keep_key=False)
+        self.tmp_auth_key = AuthKey(None)
+        if self._tmp_auth_key_callback:
+            self._tmp_auth_key_callback(self.tmp_auth_key)
 
         retries = self._retries if self._auto_reconnect else 0
 
@@ -773,12 +830,11 @@ class MTProtoSender:
                 correct_msg_id=message.msg_id)
             self._log.info('System clock is wrong, set time offset to %ds', to)
         elif bad_msg.error_code == 32:
-            # msg_seqno too low, so just pump it up by some "large" amount
-            # TODO A better fix would be to start with a new fresh session ID
-            self._state._sequence += 64
+            # msg_seqno too low
+            self._state.reset(keep_key=True)
         elif bad_msg.error_code == 33:
-            # msg_seqno too high never seems to happen but just in case
-            self._state._sequence -= 16
+            # msg_seqno too high
+            self._state.reset(keep_key=True)
         else:
             for state in states:
                 state.future.set_exception(

@@ -435,7 +435,8 @@ class UserMethods:
 
         # No InputPeer, cached peer, or known string. Fetch from disk cache
         try:
-            return self.session.get_input_entity(peer)
+            input_entity = self.session.get_input_entity(peer)
+            return input_entity
         except ValueError:
             pass
 
@@ -574,8 +575,8 @@ class UserMethods:
                     pass
             try:
                 # Nobody with this username, maybe it's an exact name/title
-                return await self.get_entity(
-                    self.session.get_input_entity(string))
+                input_entity = self.session.get_input_entity(string)
+                return await self.get_entity(input_entity)
             except ValueError:
                 pass
 
