@@ -2721,6 +2721,15 @@ class PaymentProviderInvalidError(BadRequestError):
         return type(self), (self.request,)
 
 
+class PaymentRequiredError(BadRequestError):
+    def __init__(self, request):
+        self.request = request
+        super(Exception, self).__init__('The payment is required' + self._fmt_request(self.request))
+    
+    def __reduce__(self):
+        return type(self), (self.request,)
+
+
 class PeerFloodError(BadRequestError):
     def __init__(self, request):
         self.request = request
@@ -5044,6 +5053,7 @@ rpc_errors_dict = {
     'PASSWORD_RECOVERY_NA': PasswordRecoveryNaError,
     'PASSWORD_REQUIRED': PasswordRequiredError,
     'PAYMENT_PROVIDER_INVALID': PaymentProviderInvalidError,
+    'PAYMENT_REQUIRED': PaymentRequiredError,
     'PEER_FLOOD': PeerFloodError,
     'PEER_HISTORY_EMPTY': PeerHistoryEmptyError,
     'PEER_ID_INVALID': PeerIdInvalidError,

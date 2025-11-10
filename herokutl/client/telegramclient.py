@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from ..tl import functions
 from . import (
     AccountMethods, AuthMethods, DownloadMethods, DialogMethods, ChatMethods,
-    BotMethods, MessageMethods, UploadMethods, ButtonMethods, UpdateMethods,
+    BotMethods, MessageMethods, UploadMethods, ButtonMethods, GiftMethods, UpdateMethods,
     MessageParseMethods, UserMethods, TelegramBaseClient
 )
 from .. import utils
@@ -12,7 +12,7 @@ from .. import utils
 
 class TelegramClient(
     AccountMethods, AuthMethods, DownloadMethods, DialogMethods, ChatMethods,
-    BotMethods, MessageMethods, UploadMethods, ButtonMethods, UpdateMethods,
+    BotMethods, MessageMethods, UploadMethods, ButtonMethods, GiftMethods, UpdateMethods,
     MessageParseMethods, UserMethods, TelegramBaseClient
 ):
     def __init__(self, *args, **kwargs):
