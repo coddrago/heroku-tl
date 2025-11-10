@@ -1,8 +1,8 @@
 import typing
 import re
 
-from .. import errors
-from ..tl import types, functions
+from .. import errors, hints
+from ..tl import custom, types, functions
 
 if typing.TYPE_CHECKING:
     from .telegramclient import TelegramClient
@@ -30,12 +30,71 @@ class GiftMethods:
             )
 
 
+    async def get_saved_gifts(
+            self: 'TelegramClient',
+            peer: 'hints.EntityLike',
+            collection_id: int = None,
+            exclude_unsaved: bool = None,
+            exclude_saved: bool = None,
+            exclude_unlimited: bool = None,
+            exclude_upgradable: bool = None,
+            exclude_unupgradable: bool = None,
+            exclude_nft: bool = None,
+            sort_by_price: bool = None,
+            limit: int = 0,
+            offset: str = "",
+    ) -> 'typing.AsyncGenerator["custom.StarGift", None]':
+        
+        current = 0
+        total = limit or (1 << 31) - 1
+        limit = min(100, limit)
+
+        while True:
+            r: types.payments.SavedStarGifts = await self(
+                functions.payments.GetSavedStarGiftsRequest(
+                    peer=peer,
+                    offset=offset,
+                    limit=limit,
+                    exclude_unsaved=exclude_unsaved,
+                    exclude_saved=exclude_saved,
+                    exclude_unlimited=exclude_unlimited,
+                    exclude_unique=exclude_nft,
+                    exclude_upgradable=exclude_upgradable,
+                    exclude_unupgradable=exclude_unupgradable,
+                    sort_by_value=sort_by_price,
+                    collection_id=collection_id
+                ),
+                flood_sleep_threshold=60
+            )
+
+            gifts = [
+                custom.StarGift._parse(self, gift)
+                for gift in r.gifts
+            ]
+
+            if not gifts:
+                return
+            
+            for gift in gifts:
+                yield gift
+
+                current += 1
+
+                if current >= total:
+                    return
+                
+            offset = r.next_offset
+
+            if not offset:
+                return
+
+
     async def upgrade_gift(
             self: 'TelegramClient',
             owned_gift_id: str,
             keep_original_details: bool = None,
             star_count: int = None,
-    ) -> types.payments.PaymentResult:
+    ) -> 'types.payments.PaymentResult':
         stargift = await self._get_input_stargift(owned_gift_id)
 
         try:
