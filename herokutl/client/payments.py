@@ -2,7 +2,7 @@ import typing
 import re
 
 from .. import errors, hints
-from ..tl import types, functions
+from ..tl import custom, types, functions
 
 if typing.TYPE_CHECKING:
     from .telegramclient import TelegramClient
@@ -43,7 +43,7 @@ class GiftMethods:
             sort_by_price: bool = None,
             limit: int = 0,
             offset: str = "",
-    ) -> 'typing.AsyncGenerator["types.payments.SavedStarGift", None]':
+    ) -> 'typing.AsyncGenerator["custom.StarGift", None]':
         
         current = 0
         total = limit or (1 << 31) - 1
