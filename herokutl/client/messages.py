@@ -167,7 +167,7 @@ class _MessagesIter(RequestIter):
 
         # When going in reverse we need an offset of `-limit`, but we
         # also want to respect what the user passed, so add them together.
-        if self.reverse:
+        if self.reverse and hasattr(self.request, 'add_offset'):
             self.request.add_offset -= _MAX_CHUNK_SIZE
 
         self.add_offset = add_offset
@@ -176,10 +176,11 @@ class _MessagesIter(RequestIter):
         self.last_id = 0 if self.reverse else float('inf')
 
     async def _load_next_chunk(self):
-        self.request.limit = min(self.left, _MAX_CHUNK_SIZE)
-        if self.reverse and self.request.limit != _MAX_CHUNK_SIZE:
-            # Remember that we need -limit when going in reverse
-            self.request.add_offset = self.add_offset - self.request.limit
+        if hasattr(self.request, 'limit'):
+            self.request.limit = min(self.left, _MAX_CHUNK_SIZE)
+            if self.reverse and self.request.limit != _MAX_CHUNK_SIZE:
+                # Remember that we need -limit when going in reverse
+                self.request.add_offset = self.add_offset - self.request.limit
 
         r = await self.client(self.request)
         self.total = getattr(r, 'count', len(r.messages))
@@ -205,7 +206,7 @@ class _MessagesIter(RequestIter):
             self.buffer.append(message)
 
         # Not a slice (using offset would return the same, with e.g. SearchGlobal).
-        if isinstance(r, types.messages.Messages):
+        if isinstance(r, types.messages.Messages) or not hasattr(self.request, 'limit'):
             return True
 
         # Some channels are "buggy" and may return less messages than
@@ -929,13 +930,7 @@ class MessageMethods:
                 effect=message_effect_id
             )
 
-        try:
-            result = await self(request)
-
-        except errors.rpcerrorlist.AuthKeyPermEmptyError as e:
-            await self._sender._reconnect(e)
-            result = await self(request)
-
+        result = await self(request)
         if isinstance(result, types.UpdateShortSentMessage):
             message = types.Message(
                 id=result.id,

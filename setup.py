@@ -262,5 +262,3 @@ def main(argv):
 if __name__ == '__main__':
     with TempWorkDir():
         main(sys.argv)
-
- 
