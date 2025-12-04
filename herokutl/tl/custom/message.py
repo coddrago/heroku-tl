@@ -219,6 +219,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         report_delivery_until_date: Optional[datetime] = None,
         paid_message_stars: Optional[int] = None,
         suggested_post: Optional[types.TypeSuggestedPost] = None,
+        schedule_repeat_period: Optional[int] = None,
         # Copied from MessageService.__init__ signature
         action: Optional[types.TypeMessageAction] = None,
         reactions_are_possible: Optional[bool] = None,
@@ -268,6 +269,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         self.report_delivery_until_date = report_delivery_until_date
         self.paid_message_stars = paid_message_stars
         self.suggested_post = suggested_post
+        self.schedule_repeat_period = schedule_repeat_period
         # Copied from MessageService.__init__ body
         self.action = action
         self.reactions_are_possible = reactions_are_possible
