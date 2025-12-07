@@ -1564,7 +1564,7 @@ def _photo_size_byte_count(size):
         return None
 
 
-def convert_reaction(
+def convert_reaction( # skip merge
     reaction: "typing.Optional[hints.Reaction]" = None,  # type: ignore
 ) -> "typing.Optional[typing.Union[typing.List[types.ReactionEmoji], typing.List[types.ReactionCustomEmoji]]]":  # type: ignore
     """
@@ -1592,7 +1592,7 @@ def convert_reaction(
     return reaction
 
 
-def get_input_reply_to(
+def get_input_reply_to( # skip merge
     entity: typing.Optional[typing.Union[int, types.InputUser, types.InputChannel]] = None,
     reply_to: typing.Optional[typing.Union[int, types.Message, types.StoryItem]] = None,
     top_msg_id: typing.Optional[int] = None,
@@ -1622,7 +1622,7 @@ def get_input_reply_to(
     return reply_to or None
 
 
-def get_input_story_id(
+def get_input_story_id( # skip merge
     story: 'hints.StoryItemLike',
 ) -> int:
     """

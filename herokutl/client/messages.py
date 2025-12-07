@@ -361,8 +361,7 @@ class MessageMethods:
             ids: 'typing.Union[int, typing.Sequence[int]]' = None,
             reverse: bool = False,
             reply_to: int = None,
-            scheduled: bool = False,
-            invert_media: bool = False
+            scheduled: bool = False
     ) -> 'typing.Union[_MessagesIter, _IDsIter]':
         """
         Iterator over the messages for the given chat.
@@ -644,7 +643,7 @@ class MessageMethods:
             background: bool = None,
             supports_streaming: bool = False,
             schedule: 'hints.DateLike' = None,
-            invert_media: bool = False,
+            invert_media: bool = False, # skip
             comment_to: 'typing.Union[int, types.Message]' = None,
             nosound_video: bool = None,
             send_as: typing.Optional['hints.EntityLike'] = None,
@@ -849,8 +848,8 @@ class MessageMethods:
                 attributes=attributes, parse_mode=parse_mode,
                 force_document=force_document, thumb=thumb,
                 buttons=buttons, clear_draft=clear_draft, silent=silent,
-                schedule=schedule,
-                invert_media=invert_media, supports_streaming=supports_streaming,
+                schedule=schedule, invert_media=invert_media, # skip merge
+                supports_streaming=supports_streaming,
                 formatting_entities=formatting_entities,
                 comment_to=comment_to, background=background,
                 nosound_video=nosound_video,
@@ -885,7 +884,7 @@ class MessageMethods:
                     formatting_entities=message.entities,
                     parse_mode=None,  # explicitly disable parse_mode to force using even empty formatting_entities
                     schedule=schedule,
-                    invert_media=invert_media,
+                    invert_media=invert_media, # skip merge
                     send_as=send_as, message_effect_id=message_effect_id
                 )
 
@@ -901,7 +900,7 @@ class MessageMethods:
                 no_webpage=not isinstance(
                     message.media, types.MessageMediaWebPage),
                 schedule_date=schedule,
-                invert_media=invert_media,
+                invert_media=invert_media, # skip merge
                 send_as=await self.get_input_entity(send_as) if send_as else None,
                 effect=message_effect_id
             )
@@ -925,7 +924,7 @@ class MessageMethods:
                 background=background,
                 reply_markup=self.build_reply_markup(buttons),
                 schedule_date=schedule,
-                invert_media=invert_media,
+                invert_media=invert_media, # skip merge
                 send_as=await self.get_input_entity(send_as) if send_as else None,
                 effect=message_effect_id
             )
@@ -936,7 +935,7 @@ class MessageMethods:
                 id=result.id,
                 peer_id=await self._get_peer(entity),
                 message=message,
-                invert_media=invert_media,
+                invert_media=invert_media, # skip merge
                 date=result.date,
                 out=result.out,
                 media=result.media,
@@ -1101,7 +1100,7 @@ class MessageMethods:
             link_preview: bool = True,
             file: 'hints.FileLike' = None,
             thumb: 'hints.FileLike' = None,
-            invert_media: bool = False,
+            invert_media: bool = False, # skip merge
             force_document: bool = False,
             buttons: typing.Optional['hints.MarkupLike'] = None,
             supports_streaming: bool = False,
@@ -1238,7 +1237,7 @@ class MessageMethods:
                 id=entity,
                 message=text,
                 no_webpage=not link_preview,
-                invert_media=invert_media,
+                invert_media=invert_media, # skip merge
                 entities=formatting_entities,
                 media=media,
                 reply_markup=self.build_reply_markup(buttons)
@@ -1261,7 +1260,7 @@ class MessageMethods:
             id=utils.get_message_id(message),
             message=text,
             no_webpage=not link_preview,
-            invert_media=invert_media,
+            invert_media=invert_media, # skip merge
             entities=formatting_entities,
             media=media,
             reply_markup=self.build_reply_markup(buttons),
@@ -1531,9 +1530,7 @@ class MessageMethods:
         # Pinning a message that doesn't exist would RPC-error earlier
         return self._get_response_message(request, result, entity)
 
-    # endregion
-
-    async def translate(
+    async def translate( # skip merge
         self: "TelegramClient",
         peer: "hints.EntityLike",
         message: "hints.MessageIDLike",
@@ -1571,11 +1568,9 @@ class MessageMethods:
             else ""
         )
 
-    # endregion
 
-    # endregion
 
-    async def send_reaction(
+    async def send_reaction( # skip merge
         self: "TelegramClient",
         entity: "hints.DialogLike",
         message: "hints.MessageIDLike",
@@ -1611,3 +1606,5 @@ class MessageMethods:
             reaction=utils.convert_reaction(reaction)
         )
         return await self(request)
+
+    # endregion

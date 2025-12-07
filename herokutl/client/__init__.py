@@ -22,5 +22,5 @@ from .downloads import DownloadMethods
 from .account import AccountMethods
 from .auth import AuthMethods
 from .bots import BotMethods
-from .payments import GiftMethods
+from .payments import GiftMethods # skip merge
 from .telegramclient import TelegramClient

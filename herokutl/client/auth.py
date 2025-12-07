@@ -244,6 +244,7 @@ class AuthMethods:
             else:
                 me = await self.sign_in(phone=phone, password=password)
 
+        # We won't reach here if any step failed (exit by exception)
         signed, name = 'Signed in successfully as ', utils.get_display_name(me)
         tos = '; remember to not break the ToS or you will risk an account ban!'
         try:
@@ -396,7 +397,6 @@ class AuthMethods:
         self._authorized = True
 
         state = await self(functions.updates.GetStateRequest())
-
         # the server may send an old qts in getState
         difference = await self(functions.updates.GetDifferenceRequest(pts=state.pts, date=state.date, qts=state.qts))
 
@@ -557,7 +557,7 @@ class AuthMethods:
         self._authorized = False
 
         await self.disconnect()
-        self.session.delete()
+        self.session.delete() # skip maybe_async
         self.session = None
         return True
 

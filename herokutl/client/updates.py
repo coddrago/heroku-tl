@@ -289,7 +289,7 @@ class UpdateMethods:
                         len(self._mb_entity_cache),
                         self._entity_cache_limit
                     )
-                    self._save_states_and_entities()
+                    self._save_states_and_entities() # skip maybe_async
                     self._mb_entity_cache.retain(lambda id: id == self._mb_entity_cache.self_id or id in self._message_box.map)
                     if len(self._mb_entity_cache) >= self._entity_cache_limit:
                         warnings.warn('in-memory entities exceed entity_cache_limit after flushing; consider setting a larger limit')
@@ -343,7 +343,7 @@ class UpdateMethods:
                     if updates:
                         self._log[__name__].info('Got difference for account updates')
 
-                    _preprocess_updates = self._preprocess_updates(updates, users, chats)
+                    _preprocess_updates = self._preprocess_updates(updates, users, chats) # skip maybe_async
                     updates_to_dispatch.extend(_preprocess_updates)
                     continue
 
@@ -442,7 +442,7 @@ class UpdateMethods:
                     if updates:
                         self._log[__name__].info('Got difference for channel %d updates', get_diff.channel.channel_id)
 
-                    _preprocess_updates = self._preprocess_updates(updates, users, chats)
+                    _preprocess_updates = self._preprocess_updates(updates, users, chats) # skip maybe_async
                     updates_to_dispatch.extend(_preprocess_updates)
                     continue
 
@@ -464,7 +464,7 @@ class UpdateMethods:
                 except GapError:
                     continue  # get(_channel)_difference will start returning requests
 
-                _preprocess_updates = self._preprocess_updates(processed, users, chats)
+                _preprocess_updates = self._preprocess_updates(processed, users, chats) # skip maybe_async
                 updates_to_dispatch.extend(_preprocess_updates)
         except asyncio.CancelledError:
             pass
@@ -473,9 +473,9 @@ class UpdateMethods:
             self._updates_error = e
             await self.disconnect()
 
-    def _preprocess_updates(self, updates, users, chats):
+    def _preprocess_updates(self, updates, users, chats): # skip maybe_async
         self._mb_entity_cache.extend(users, chats)
-        self.session.process_entities(types.contacts.ResolvedPeer(None, users, chats))
+        self.session.process_entities(types.contacts.ResolvedPeer(None, users, chats)) # skip maybe_async
         entities = {utils.get_peer_id(x): x
                     for x in itertools.chain(users, chats)}
         for u in updates:
@@ -518,9 +518,9 @@ class UpdateMethods:
             # inserted because this is a rather expensive operation
             # (default's sqlite3 takes ~0.1s to commit changes). Do
             # it every minute instead. No-op if there's nothing new.
-            self._save_states_and_entities()
+            self._save_states_and_entities() # skip maybe_async
 
-            self.session.save()
+            self.session.save() # skip maybe_async
 
     async def _dispatch_update(self: 'TelegramClient', update):
         # TODO only used for AlbumHack, and MessageBox is not really designed for this

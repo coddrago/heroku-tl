@@ -1238,7 +1238,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
                     return None
 
     # endregion Private Methods
-    async def react(
+    async def react( # skip merge
         self,
         reaction: "typing.Optional[hints.Reaction]" = None,  # type: ignore
         big: bool = False,
@@ -1258,7 +1258,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
                 add_to_recent=add_to_recent,
             )
 
-    async def link(
+    async def link( # skip merge
             self,
             grouped: bool = False,
             thread: bool = False,
@@ -1290,7 +1290,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
 
     # region Private Methods
 
-    async def translate(self, to_lang: str):
+    async def translate(self, to_lang: str): # skip merge
         """
         Translates the message using Google Translate.
         Args:
