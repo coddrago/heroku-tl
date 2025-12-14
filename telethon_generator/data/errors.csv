@@ -301,6 +301,7 @@ PASSWORD_RECOVERY_NA,400,"No email was set, can't recover password via email"
 PASSWORD_REQUIRED,400,The account must have 2-factor authentication enabled (a password) before this method can be used
 PASSWORD_TOO_FRESH_X,400,The password was added too recently and {seconds} seconds must pass before using the method
 PAYMENT_PROVIDER_INVALID,400,The payment provider was not recognised or its token was invalid
+PAYMENT_REQUIRED,400,The payment is required
 PEER_FLOOD,400,Too many requests
 PEER_HISTORY_EMPTY,400,
 PEER_ID_INVALID,400,"An invalid Peer was used. Make sure to pass the right peer type and that the value is valid (for instance, bots cannot start conversations)"

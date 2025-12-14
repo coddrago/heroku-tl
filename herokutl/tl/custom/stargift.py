@@ -86,6 +86,31 @@ class StarGift:
             prepaid_upgrade_hash=gift.prepaid_upgrade_hash,
             client=client,
         )
+    
+    def to_dict(self):
+        return {
+            '_': "StarGift",
+            'date': self.date,
+            'gift': self.gift,
+            'name_hidden': self.name_hidden,
+            'unsaved': self.unsaved,
+            'refunded': self.refunded,
+            'can_upgrade': self.can_upgrade,
+            'pinned_to_top': self.pinned_to_top,
+            'upgrade_separate': self.upgrade_separate,
+            'from_id': self.from_id,
+            'message': self.message,
+            'msg_id': self.msg_id,
+            'saved_id': self.saved_id,
+            'convert_stars': self.convert_stars,
+            'upgrade_stars': self.upgrade_stars,
+            'can_export_at': self.can_export_at,
+            'transfer_stars': self.transfer_stars,
+            'can_transfer_at': self.can_transfer_at,
+            'can_resell_at': self.can_resell_at,
+            'collection_id': self.collection_id,
+            'prepaid_upgrade_hash': self.prepaid_upgrade_hash
+        }
 
 
 
@@ -99,3 +124,4 @@ class StarGift:
             keep_original_details=keep_original_details,
             star_count=star_count
         )
+    # endregion Public Methods
