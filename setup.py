@@ -252,7 +252,7 @@ def main(argv):
             packages=find_packages(exclude=[
                 'telethon_*', 'tests*'
             ]),
-            install_requires=['pyaes', '', 'aiofile==3.8.1', 'aiofiles==24.1.0', 'gitpython==3.1.27', 'meval==2.5', 'aiohttp_jinja2==1.5', 'aiohttp==3.11.18', 'Jinja2==3.0.3', 'requests==2.27.1', 'aiogram==3.23.0', 'grapheme==0.6.0', 'emoji==2.1.0', 'werkzeug==2.2.2', 'psutil==6.0.0', 'tgcrypto==1.2.5', 'rsa==4.9', 'ruamel.yaml==0.17.21', 'bs4==0.0.2', 'whoosh', 'pydantic-core==2.35.2'],
+            install_requires=['pyaes', '', 'aiofile==3.8.1', 'aiofiles==24.1.0', 'gitpython==3.1.27', 'meval==2.5', 'aiohttp_jinja2==1.5', 'aiohttp==3.11.18', 'Jinja2==3.0.3', 'requests==2.27.1', 'grapheme==0.6.0', 'emoji==2.1.0', 'werkzeug==2.2.2', 'psutil==6.0.0', 'tgcrypto==1.2.5', 'rsa==4.9', 'ruamel.yaml==0.17.21', 'bs4==0.0.2', 'whoosh'],
             extras_require={
                 'cryptg': ['cryptg']
             }
