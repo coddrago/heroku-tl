@@ -9,7 +9,16 @@ import typing
 import logging
 import warnings
 from collections import deque
-import sqlite3
+
+try:
+    import sqlite3
+
+    OperationalError = sqlite3.OperationalError
+except ImportError as e:
+    sqlite3 = None
+
+    class OperationalError(Exception):
+        pass  # won't be created and thus never caught
 
 from .. import events, utils, errors
 from ..events.common import EventBuilder, EventCommon
@@ -325,7 +334,7 @@ class UpdateMethods:
                             await self.disconnect()
                             break
                         continue
-                    except (errors.TypeNotFoundError, sqlite3.OperationalError) as e:
+                    except (errors.TypeNotFoundError, OperationalError) as e:
                         # User is likely doing weird things with their account or session and Telegram gets confused as to what layer they use
                         self._log[__name__].warning('Cannot get difference since the account is likely misusing the session: %s', e)
                         self._message_box.end_difference()
@@ -368,7 +377,7 @@ class UpdateMethods:
                             await self.disconnect()
                             break
                         continue
-                    except (errors.TypeNotFoundError, sqlite3.OperationalError) as e:
+                    except (errors.TypeNotFoundError, OperationalError) as e:
                         self._log[__name__].warning(
                             'Cannot get difference for channel %s since the account is likely misusing the session: %s',
                             get_diff.channel.channel_id, e
@@ -442,8 +451,7 @@ class UpdateMethods:
                     if updates:
                         self._log[__name__].info('Got difference for channel %d updates', get_diff.channel.channel_id)
 
-                    _preprocess_updates = self._preprocess_updates(updates, users, chats) # skip maybe_async
-                    updates_to_dispatch.extend(_preprocess_updates)
+                    updates_to_dispatch.extend(self._preprocess_updates(updates, users, chats))  # skip maybe_async
                     continue
 
                 deadline = self._message_box.check_deadlines()
@@ -464,8 +472,7 @@ class UpdateMethods:
                 except GapError:
                     continue  # get(_channel)_difference will start returning requests
 
-                _preprocess_updates = self._preprocess_updates(processed, users, chats) # skip maybe_async
-                updates_to_dispatch.extend(_preprocess_updates)
+                updates_to_dispatch.extend(self._preprocess_updates(processed, users, chats)) # skip maybe_async
         except asyncio.CancelledError:
             pass
         except Exception as e:

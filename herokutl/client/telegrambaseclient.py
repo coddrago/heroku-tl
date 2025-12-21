@@ -306,6 +306,16 @@ class TelegramBaseClient(abc.ABC):
                 'The given session must be a str or a Session instance.'
             )
 
+        # ':' in session.server_address is True if it's an IPv6 address
+        if (not session.server_address or
+                (':' in session.server_address) != use_ipv6):
+            session.set_dc(
+                DEFAULT_DC_ID,
+                DEFAULT_IPV6_IP if self._use_ipv6 else DEFAULT_IPV4_IP,
+                DEFAULT_PORT
+            )
+            session.save()
+
         self.flood_sleep_threshold = flood_sleep_threshold
 
         # TODO Use AsyncClassWrapper(session)
@@ -537,18 +547,6 @@ class TelegramBaseClient(abc.ABC):
                 )
             )
 
-        # ':' in session.server_address is True if it's an IPv6 address
-        if (not self.session.server_address or
-                (':' in self.session.server_address) != self._use_ipv6):
-            await utils.maybe_async(
-                self.session.set_dc(
-                    DEFAULT_DC_ID,
-                    DEFAULT_IPV6_IP if self._use_ipv6 else DEFAULT_IPV4_IP,
-                    DEFAULT_PORT
-                )
-            )
-            await utils.maybe_async(self.session.save())
-
         if not await self._sender.connect(self._connection(
             self.session.server_address,
             self.session.port,
@@ -576,8 +574,7 @@ class TelegramBaseClient(abc.ABC):
             ss = SessionState(0, 0, False, 0, 0, 0, 0, None)
             cs = []
 
-            update_states = self.session.get_update_states() # skip maybe_async
-            for entity_id, state in update_states:
+            for entity_id, state in self.session.get_update_states(): # skip maybe_async
                 if entity_id == 0:
                     # TODO current session doesn't store self-user info but adding that is breaking on downstream session impls
                     ss = SessionState(0, 0, False, state.pts, state.qts, int(state.date.timestamp()), state.seq, None)

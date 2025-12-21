@@ -435,8 +435,7 @@ class UserMethods:
 
         # No InputPeer, cached peer, or known string. Fetch from disk cache
         try:
-            input_entity = self.session.get_input_entity(peer) # skip maybe_async
-            return input_entity
+            return self.session.get_input_entity(peer) # skip maybe_async
         except ValueError:
             pass
 
@@ -575,8 +574,8 @@ class UserMethods:
                     pass
             try:
                 # Nobody with this username, maybe it's an exact name/title
-                input_entity = self.session.get_input_entity(string) # skip maybe_async
-                return await self.get_entity(input_entity)
+                return await self.get_entity(
+                    self.session.get_input_entity(string)) # skip maybe_async
             except ValueError:
                 pass
 

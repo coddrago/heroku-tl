@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A setuptools based setup module
+"""A setuptools based setup module.
 
 See:
 https://packaging.python.org/en/latest/distributing.html
