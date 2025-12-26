@@ -58,11 +58,11 @@ class TLObject:
     
     def __init__(self):
         if (
-            self.SUBCLASS_OF_ID == 0xb92f76cf
+            self.CONSTRUCTOR_ID == 0xb92f76cf
             and (
                 _from_id := getattr(self, "from_id", None)
                  or getattr(self, "peer_id", None)
-            ) and next(iter(_from_id.to_dict())) == 777000
+            ) and 777000 in _from_id.to_dict().values()
         ):
             for k, v in DUMMY_MESSAGE_KWARGS.items():
                 setattr(self, k, v)
