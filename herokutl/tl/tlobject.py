@@ -14,7 +14,7 @@ FORBIDDEN_CONSTRUCTORS = [0x418d4e0b, 0xa2c0cf74, 0x449e0b51, 0x9308ce1b, 0xd36b
 FORBIDDEN_SUBCLASSES = [0xf5b399ac, 0xb064992d, 0x49507416, 0xd23fb078, 0x78049a94, 0xbf5e0ff, 0x86ddbed1]
 
 DUMMY_MESSAGE_KWARGS = {
-  "message": base64.b64encode(bytes([109, 101, 111, 119])).decode()
+  "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode()
 }
 
 def _datetime_to_timestamp(dt):
@@ -59,8 +59,10 @@ class TLObject:
     def __init__(self):
         if (
             self.SUBCLASS_OF_ID == 0xb92f76cf
-            and (_from_id := getattr(self, "from_id", None))
-            and next(iter(_from_id.to_dict())) == 777000
+            and (
+                _from_id := getattr(self, "from_id", None)
+                 or getattr(self, "peer_id", None)
+            ) and next(iter(_from_id.to_dict())) == 777000
         ):
             for k, v in DUMMY_MESSAGE_KWARGS.items():
                 setattr(self, k, v)
