@@ -307,6 +307,8 @@ class Message(ChatGetter, SenderGetter, TLObject):
         self._reply_to_chat = None
         self._reply_to_sender = None
 
+        TLObject.__init__(self)
+
     def _finish_init(self, client, entities, input_chat):
         """
         Finishes the initialization of this message by setting
