@@ -248,6 +248,9 @@ def _write_class_init(tlobject, kind, type_constructors, builder):
         else:
             raise ValueError('Cannot infer a value for ', arg)
 
+    builder.writeln()
+    builder.writeln('super().__init__()')
+
     builder.end_block()
 
 
