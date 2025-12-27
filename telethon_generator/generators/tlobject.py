@@ -281,8 +281,8 @@ def _write_resolve(tlobject, builder):
             else:
                 builder.writeln('self.{} = {}', arg.name,
                               ac.format('self.' + arg.name))
-                builder.writeln("self.check_peer({})",
-                              ac.format('self.' + arg.name))
+                builder.writeln("self._check_peer({})",
+                              'self.' + arg.name)
 
 
             if arg.flag:
