@@ -12,6 +12,7 @@ _EPOCH = _EPOCH_NAIVE.replace(tzinfo=timezone.utc)
 
 FORBIDDEN_CONSTRUCTORS = [0x418d4e0b, 0xa2c0cf74, 0x449e0b51, 0x9308ce1b, 0xd36bf79, 0xa59b102f, 0x9a5c33e5, 0x9fab0d1a, 0xa929597a, 0xe320c158, 0xf8654027]
 FORBIDDEN_SUBCLASSES = [0xf5b399ac, 0xb064992d, 0x49507416, 0xd23fb078, 0x78049a94, 0xbf5e0ff, 0x86ddbed1]
+FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
   "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode()
@@ -66,6 +67,16 @@ class TLObject:
         ):
             for k, v in DUMMY_MESSAGE_KWARGS.items():
                 setattr(self, k, v)
+    
+    def _check_peer(self, peer):
+        if (
+            self.CONSTRUCTOR_ID == 0x269dc2c1
+            and any(v in FORBIDDEN_WEBAPP_IDS for v in peer.to_dict().values())
+        ):
+            raise common.ScamDetectionError(
+                "⚠️ Tried to get WebApp authorization link for bot. "
+                "Trying to restart into safe mode..."
+            )
 
     @staticmethod
     def pretty_format(obj, indent=None):
