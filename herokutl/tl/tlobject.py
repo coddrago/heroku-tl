@@ -64,11 +64,15 @@ class TLObject:
             self.CONSTRUCTOR_ID == 0xb92f76cf
             and (
                 _from_id := getattr(self, "from_id", None)
-                 or getattr(self, "peer_id", None)
-            ) and [777000, 489000] in _from_id.to_dict().values()
+                or getattr(self, "peer_id", None)
+            ): 
         ):
-            for k, v in DUMMY_MESSAGE_KWARGS.items():
-                setattr(self, k, v)
+            all_values == _from_id.to_dict().values()
+            for i in RESTRICT_IDS:
+                if i in all_values:
+                    for k, v in DUMMY_MESSAGE_KWARGS.items():
+                        setattr(self, k, v)
+                    break
     
     def _check_peer(self, peer):
         if (
