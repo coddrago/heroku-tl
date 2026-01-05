@@ -18,7 +18,7 @@ DUMMY_MESSAGE_KWARGS = {
   "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode()
 }
 
-RESTRICT_IDS: [777000, 489000]
+RESTRICT_IDS = [777000, 489000]
 
 def _datetime_to_timestamp(dt):
     # If no timezone is specified, it is assumed to be in utc zone
