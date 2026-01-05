@@ -67,7 +67,7 @@ class TLObject:
                 or getattr(self, "peer_id", None)
             )
         ):
-            all_values == _from_id.to_dict().values()
+            all_values = _from_id.to_dict().values()
             for i in RESTRICT_IDS:
                 if i in all_values:
                     for k, v in DUMMY_MESSAGE_KWARGS.items():
