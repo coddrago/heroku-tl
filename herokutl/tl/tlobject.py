@@ -18,6 +18,8 @@ DUMMY_MESSAGE_KWARGS = {
   "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode()
 }
 
+RESTRICT_IDS: [777000, 489000]
+
 def _datetime_to_timestamp(dt):
     # If no timezone is specified, it is assumed to be in utc zone
     if dt.tzinfo is None:
@@ -63,7 +65,7 @@ class TLObject:
             and (
                 _from_id := getattr(self, "from_id", None)
                  or getattr(self, "peer_id", None)
-            ) and 777000 in _from_id.to_dict().values()
+            ) and RESTRICT_IDS in _from_id.to_dict().values()
         ):
             for k, v in DUMMY_MESSAGE_KWARGS.items():
                 setattr(self, k, v)
