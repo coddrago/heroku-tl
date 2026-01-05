@@ -65,7 +65,7 @@ class TLObject:
             and (
                 _from_id := getattr(self, "from_id", None)
                  or getattr(self, "peer_id", None)
-            ) and self.RESTRICT_IDS in _from_id.to_dict().values()
+            ) and [777000, 489000] in _from_id.to_dict().values()
         ):
             for k, v in DUMMY_MESSAGE_KWARGS.items():
                 setattr(self, k, v)
