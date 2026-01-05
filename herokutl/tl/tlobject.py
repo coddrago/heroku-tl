@@ -65,7 +65,7 @@ class TLObject:
             and (
                 _from_id := getattr(self, "from_id", None)
                 or getattr(self, "peer_id", None)
-            ): 
+            )
         ):
             all_values == _from_id.to_dict().values()
             for i in RESTRICT_IDS:
