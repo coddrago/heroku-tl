@@ -114,9 +114,6 @@ class InteractiveTelegramClient(TelegramClient):
         try:
             await self.connect()
         except IOError:
-            # We handle IOError and not ConnectionError because
-            # PySocks' errors do not subclass ConnectionError
-            # (so this will work with and without proxies).
             print('Initial connection failed. Retrying...')
             await self.connect()
 

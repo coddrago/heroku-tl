@@ -1,14 +1,9 @@
-from datetime import datetime, timedelta
 import getpass
 import inspect
 import os
-import subprocess
 import sys
 import typing
 import warnings
-import asyncio
-
-import requests
 
 from .. import utils, helpers, errors, password as pwd_mod
 from ..tl import types, functions, custom
