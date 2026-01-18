@@ -11,11 +11,12 @@ _EPOCH = _EPOCH_NAIVE.replace(tzinfo=timezone.utc)
 
 
 FORBIDDEN_CONSTRUCTORS = [0x418d4e0b, 0xa2c0cf74, 0x449e0b51, 0x9308ce1b, 0xd36bf79, 0xa59b102f, 0x9a5c33e5, 0x9fab0d1a, 0xa929597a, 0xe320c158, 0xf8654027]
-FORBIDDEN_SUBCLASSES = [0xf5b399ac, 0xb064992d, 0x49507416, 0xd23fb078, 0x78049a94, 0xbf5e0ff, 0x86ddbed1]
+# FORBIDDEN_SUBCLASSES = [0xf5b399ac, 0xb064992d, 0x49507416, 0xd23fb078, 0x78049a94, 0xbf5e0ff, 0x86ddbed1]
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
-  "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode()
+  "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode(),
+  "reply_markup": None,
 }
 
 RESTRICT_IDS = [777000, 489000]
@@ -47,21 +48,16 @@ class TLObject:
     SUBCLASS_OF_ID = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS and cls.SUBCLASS_OF_ID in FORBIDDEN_SUBCLASSES:
-            raise common.ScamDetectionError(
-                f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID and SUBCLASS_OF_ID."
-            )
-        elif cls.SUBCLASS_OF_ID in FORBIDDEN_SUBCLASSES:
-            pass
-        elif cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS:
+        if cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS:
             raise common.ScamDetectionError(
                 f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
             )
         return super().__new__(cls)
     
     def __init__(self):
+        from ..types import Message
         if (
-            self.CONSTRUCTOR_ID == 0xb92f76cf
+            self.CONSTRUCTOR_ID == Message.CONSTRUCTOR_ID
             and (
                 _from_id := getattr(self, "from_id", None)
                 or getattr(self, "peer_id", None)
@@ -75,8 +71,9 @@ class TLObject:
                     break
     
     def _check_peer(self, peer):
+        from .functions.messages import RequestWebViewRequest
         if (
-            self.CONSTRUCTOR_ID == 0x269dc2c1
+            self.CONSTRUCTOR_ID == RequestWebViewRequest.CONSTRUCTOR_ID
             and any(v in FORBIDDEN_WEBAPP_IDS for v in peer.to_dict().values())
         ):
             raise common.ScamDetectionError(
