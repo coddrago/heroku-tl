@@ -10,8 +10,19 @@ _EPOCH_NAIVE_LOCAL = datetime(*time.localtime(0)[:6])
 _EPOCH = _EPOCH_NAIVE.replace(tzinfo=timezone.utc)
 
 
-FORBIDDEN_CONSTRUCTORS = [0x418d4e0b, 0xa2c0cf74, 0x449e0b51, 0x9308ce1b, 0xd36bf79, 0xa59b102f, 0x9a5c33e5, 0x9fab0d1a, 0xa929597a, 0xe320c158, 0xf8654027]
-# FORBIDDEN_SUBCLASSES = [0xf5b399ac, 0xb064992d, 0x49507416, 0xd23fb078, 0x78049a94, 0xbf5e0ff, 0x86ddbed1]
+FORBIDDEN_CONSTRUCTORS = set(
+ # DeleteAccount
+ # GetTmpPassword
+ # ResetPassword
+ # CheckRecoveryPassword
+ # UpdatePasswordSettings
+ # PasswordSettings # type
+ # ResetAuthorizations
+ # GetAuthorizationForm
+ # GetAuthorizations
+ # ExportContactToken
+)
+
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
@@ -20,6 +31,34 @@ DUMMY_MESSAGE_KWARGS = {
 }
 
 RESTRICT_IDS = [777000, 489000]
+
+def _get_forbid_constructors():
+    global FORBIDDEN_CONSTRUCTORS
+    if not FORBIDDEN_CONSTRUCTORS:
+        from .functions import (
+            DeleteAccountRequest, GetTmpPasswordRequest, ResetPasswordRequest,
+            CheckRecoveryPasswordRequest, UpdatePasswordSettingsRequest,
+            ResetAuthorizationsRequest, GetAuthorizationFormRequest,
+            GetAuthorizationsRequest, ExportContactTokenRequest
+        )
+        from .types import PasswordSettings
+
+        FORBIDDEN_CONSTRUCTORS |= (
+            {
+                DeleteAccountRequest.CONSTRUCTOR_ID,
+                GetTmpPasswordRequest.CONSTRUCTOR_ID,
+                ResetPasswordRequest.CONSTRUCTOR_ID,
+                CheckRecoveryPasswordRequest.CONSTRUCTOR_ID,
+                UpdatePasswordSettingsRequest.CONSTRUCTOR_ID,
+                ResetAuthorizationsRequest.CONSTRUCTOR_ID,
+                GetAuthorizationFormRequest.CONSTRUCTOR_ID,
+                GetAuthorizationsRequest.CONSTRUCTOR_ID,
+                ExportContactTokenRequest.CONSTRUCTOR_ID,
+                PasswordSettings.CONSTRUCTOR_ID
+            }
+        )
+
+    return FORBIDDEN_CONSTRUCTORS
 
 def _datetime_to_timestamp(dt):
     # If no timezone is specified, it is assumed to be in utc zone
@@ -48,14 +87,14 @@ class TLObject:
     SUBCLASS_OF_ID = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.CONSTRUCTOR_ID in FORBIDDEN_CONSTRUCTORS:
+        if cls.CONSTRUCTOR_ID in _get_forbid_constructors():
             raise common.ScamDetectionError(
                 f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
             )
         return super().__new__(cls)
     
     def __init__(self):
-        from ..types import Message
+        from .types import Message
         if (
             self.CONSTRUCTOR_ID == Message.CONSTRUCTOR_ID
             and (
