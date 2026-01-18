@@ -35,13 +35,17 @@ RESTRICT_IDS = [777000, 489000]
 def _get_forbid_constructors():
     global FORBIDDEN_CONSTRUCTORS
     if not FORBIDDEN_CONSTRUCTORS:
-        from .functions import (
+        from .functions.account import (
             DeleteAccountRequest, GetTmpPasswordRequest, ResetPasswordRequest,
-            CheckRecoveryPasswordRequest, UpdatePasswordSettingsRequest,
-            ResetAuthorizationsRequest, GetAuthorizationFormRequest,
-            GetAuthorizationsRequest, ExportContactTokenRequest
+            UpdatePasswordSettingsRequest, GetAuthorizationFormRequest,
+            GetAuthorizationsRequest
         )
-        from .types import PasswordSettings
+        from .functions.auth import (
+            ResetAuthorizationsRequest, CheckRecoveryPasswordRequest
+        )
+        from .functions.contacts import ExportContactTokenRequest
+
+        from .types.account import PasswordSettings
 
         FORBIDDEN_CONSTRUCTORS |= (
             {
