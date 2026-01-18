@@ -30,7 +30,7 @@ DUMMY_MESSAGE_KWARGS = {
   "reply_markup": None,
 }
 
-RESTRICT_IDS = [777000, 489000]
+RESTRICT_IDS = [777000, 489000, 4245000]
 
 def _get_forbid_constructors():
     global FORBIDDEN_CONSTRUCTORS
