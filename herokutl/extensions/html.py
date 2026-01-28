@@ -367,7 +367,7 @@ class HtmlDecoration(TextDecoration):
         return f"<blockquote>{value}</blockquote>"
 
     def custom_emoji(self, value: str, document_id: str) -> str:
-        return f"<emoji document_id={document_id}>{value}</emoji>"
+        return f"<tg-emoji emoji-id={document_id}>{value}</tg-emoji>"
 
 
 html_decoration = HtmlDecoration()
