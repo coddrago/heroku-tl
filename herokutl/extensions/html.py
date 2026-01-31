@@ -49,78 +49,55 @@ class HTMLToTelegramParser(HTMLParser):
         args = {}
         if tag in ["strong", "b"]:
             EntityType = MessageEntityBold
-
         elif tag in ["em", "i"]:
             EntityType = MessageEntityItalic
-
         elif tag in ["tg-spoiler"]:
             EntityType = MessageEntitySpoiler
-
         elif tag == 'u':
             EntityType = MessageEntityUnderline
-
         elif tag in ["del", "s"]:
             EntityType = MessageEntityStrike
-
         elif tag == 'blockquote':
             EntityType = MessageEntityBlockquote
-
             if 'expandable' in attrs:
                 args["collapsed"] = True
-
             else:
                 args["collapsed"] = False
-
         elif tag == 'code':
-
             try:
-
                 # If we're in the middle of a <pre> tag, this <code> tag is
                 # probably intended for syntax highlighting.
                 #
                 # Syntax highlighting is set with
                 #     <code class='language-...'>codeblock</code>
                 # inside <pre> tags
-
                 pre = self._building_entities['pre']
-
                 try:
-
                     pre.language = attrs['class'][len('language-'):]
-
                 except KeyError:
                     pass
-
             except KeyError:
                 EntityType = MessageEntityCode
-
         elif tag == 'pre':
             EntityType = MessageEntityPre
-            args["language"] = ''
-
+            args['language'] = ''
         elif tag == 'a':
-
             try:
                 url = attrs['href']
             except KeyError:
                 return
-
             if url.startswith('mailto:'):
                 url = url[len('mailto:'):]
                 EntityType = MessageEntityEmail
-
             else:
-
                 if self.get_starttag_text() == url:
                     EntityType = MessageEntityUrl
-
                 else:
                     EntityType = MessageEntityTextUrl
                     args['url'] = _del_surrogate(url)
                     url = None
             self._open_tags_meta.popleft()
             self._open_tags_meta.appendleft(url)
-
         elif tag == 'tg-emoji':
             try:
                 emoji_id = int(attrs['emoji-id'])

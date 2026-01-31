@@ -161,6 +161,253 @@ class UploadMethods:
             send_as: typing.Optional['hints.EntityLike'] = None,
             message_effect_id: typing.Optional[int] = None,
             **kwargs) -> typing.Union[typing.List[typing.Any], typing.Any]:
+        """
+        Sends message with the given file to the specified entity.
+
+        .. note::
+
+            If the ``hachoir3`` package (``hachoir`` module) is installed,
+            it will be used to determine metadata from audio and video files.
+
+            If the ``pillow`` package is installed and you are sending a photo,
+            it will be resized to fit within the maximum dimensions allowed
+            by Telegram to avoid ``errors.PhotoInvalidDimensionsError``. This
+            cannot be done if you are sending :tl:`InputFile`, however.
+
+        Arguments
+            entity (`entity`):
+                Who will receive the file.
+
+            file (`str` | `bytes` | `file` | `media`):
+                The file to send, which can be one of:
+
+                * A local file path to an in-disk file. The file name
+                  will be the path's base name.
+
+                * A `bytes` byte array with the file's data to send
+                  (for example, by using ``text.encode('utf-8')``).
+                  A default file name will be used.
+
+                * A bytes `io.IOBase` stream over the file to send
+                  (for example, by using ``open(file, 'rb')``).
+                  Its ``.name`` property will be used for the file name,
+                  or a default if it doesn't have one.
+
+                * An external URL to a file over the internet. This will
+                  send the file as "external" media, and Telegram is the
+                  one that will fetch the media and send it.
+
+                * A Bot API-like ``file_id``. You can convert previously
+                  sent media to file IDs for later reusing with
+                  `telethon.utils.pack_bot_file_id`.
+
+                * A handle to an existing file (for example, if you sent a
+                  message with media before, you can use its ``message.media``
+                  as a file here).
+
+                * A handle to an uploaded file (from `upload_file`).
+
+                * A :tl:`InputMedia` instance. For example, if you want to
+                  send a dice use :tl:`InputMediaDice`, or if you want to
+                  send a contact use :tl:`InputMediaContact`.
+
+                To send an album, you should provide a list in this parameter.
+
+                If a list or similar is provided, the files in it will be
+                sent as an album in the order in which they appear, sliced
+                in chunks of 10 if more than 10 are given.
+
+            caption (`str`, optional):
+                Optional caption for the sent media message. When sending an
+                album, the caption may be a list of strings, which will be
+                assigned to the files pairwise.
+
+            force_document (`bool`, optional):
+                If left to `False` and the file is a path that ends with
+                the extension of an image file or a video file, it will be
+                sent as such. Otherwise always as a document.
+
+            mime_type (`str`, optional):
+                Custom mime type to use for the file to be sent (for example,
+                ``audio/mpeg``, ``audio/x-vorbis+ogg``, etc.).
+                It can change the type of files displayed.
+                If not set to any value, the mime type will be determined
+                automatically based on the file's extension.
+
+            file_size (`int`, optional):
+                The size of the file to be uploaded if it needs to be uploaded,
+                which will be determined automatically if not specified.
+
+                If the file size can't be determined beforehand, the entire
+                file will be read in-memory to find out how large it is.
+
+            clear_draft (`bool`, optional):
+                Whether the existing draft should be cleared or not.
+
+            progress_callback (`callable`, optional):
+                A callback function accepting two parameters:
+                ``(sent bytes, total)``.
+
+            reply_to (`int` | `Message <telethon.tl.custom.message.Message>`):
+                Same as `reply_to` from `send_message`.
+
+            attributes (`list`, optional):
+                Optional attributes that override the inferred ones, like
+                :tl:`DocumentAttributeFilename` and so on.
+
+            thumb (`str` | `bytes` | `file`, optional):
+                Optional JPEG thumbnail (for documents). **Telegram will
+                ignore this parameter** unless you pass a ``.jpg`` file!
+
+                The file must also be small in dimensions and in disk size.
+                Successful thumbnails were files below 20kB and 320x320px.
+                Width/height and dimensions/size ratios may be important.
+                For Telegram to accept a thumbnail, you must provide the
+                dimensions of the underlying media through ``attributes=``
+                with :tl:`DocumentAttributeVideo` or by installing the
+                optional ``hachoir`` dependency.
+
+
+            allow_cache (`bool`, optional):
+                This parameter currently does nothing, but is kept for
+                backward-compatibility (and it may get its use back in
+                the future).
+
+            parse_mode (`object`, optional):
+                See the `TelegramClient.parse_mode
+                <telethon.client.messageparse.MessageParseMethods.parse_mode>`
+                property for allowed values. Markdown parsing will be used by
+                default.
+
+            formatting_entities (`list`, optional):
+                Optional formatting entities for the sent media message. When sending an album,
+                `formatting_entities` can be a list of lists, where each inner list contains
+                `types.TypeMessageEntity`. Each inner list will be assigned to the corresponding
+                file in a pairwise manner with the caption. If provided, the ``parse_mode``
+                parameter will be ignored.
+
+            voice_note (`bool`, optional):
+                If `True` the audio will be sent as a voice note.
+
+            video_note (`bool`, optional):
+                If `True` the video will be sent as a video note,
+                also known as a round video message.
+
+            buttons (`list`, `custom.Button <telethon.tl.custom.button.Button>`, :tl:`KeyboardButton`):
+                The matrix (list of lists), row list or button to be shown
+                after sending the message. This parameter will only work if
+                you have signed in as a bot. You can also pass your own
+                :tl:`ReplyMarkup` here.
+
+            silent (`bool`, optional):
+                Whether the message should notify people with sound or not.
+                Defaults to `False` (send with a notification sound unless
+                the person has the chat muted). Set it to `True` to alter
+                this behaviour.
+
+            background (`bool`, optional):
+                Whether the message should be send in background.
+
+            supports_streaming (`bool`, optional):
+                Whether the sent video supports streaming or not. Note that
+                Telegram only recognizes as streamable some formats like MP4,
+                and others like AVI or MKV will not work. You should convert
+                these to MP4 before sending if you want them to be streamable.
+                Unsupported formats will result in ``VideoContentTypeError``.
+
+            schedule (`hints.DateLike`, optional):
+                If set, the file won't send immediately, and instead
+                it will be scheduled to be automatically sent at a later
+                time.
+
+            comment_to (`int` | `Message <telethon.tl.custom.message.Message>`, optional):
+                Similar to ``reply_to``, but replies in the linked group of a
+                broadcast channel instead (effectively leaving a "comment to"
+                the specified message).
+
+                This parameter takes precedence over ``reply_to``. If there is
+                no linked chat, `telethon.errors.sgIdInvalidError` is raised.
+
+            ttl (`int`. optional):
+                The Time-To-Live of the file (also known as "self-destruct timer"
+                or "self-destructing media"). If set, files can only be viewed for
+                a short period of time before they disappear from the message
+                history automatically.
+
+                The value must be at least 1 second, and at most 60 seconds,
+                otherwise Telegram will ignore this parameter.
+
+                Not all types of media can be used with this parameter, such
+                as text documents, which will fail with ``TtlMediaInvalidError``.
+
+            nosound_video (`bool`, optional):
+                Only applicable when sending a video file without an audio
+                track. If set to ``True``, the video will be displayed in
+                Telegram as a video. If set to ``False``, Telegram will attempt
+                to display the video as an animated gif. (It may still display
+                as a video due to other factors.) The value is ignored if set
+                on non-video files. This is set to ``True`` for albums, as gifs
+                cannot be sent in albums.
+
+            send_as (`entity`):
+                Unique identifier (int) or username (str) of the chat or channel to send the message as.
+                You can use this to send the message on behalf of a chat or channel where you have appropriate permissions.
+                Use the GetSendAs to return the list of message sender identifiers, which can be used to send messages in the chat,
+                This setting applies to the current message and will remain effective for future messages unless explicitly changed.
+                To set this behavior permanently for all messages, use SaveDefaultSendAs.
+
+            message_effect_id (`int`, optional):
+                Unique identifier of the message effect to be added to the message; for private chats only
+
+        Returns
+            The `Message <telethon.tl.custom.message.Message>` (or messages)
+            containing the sent file, or messages if a list of them was passed.
+
+        Example
+            .. code-block:: python
+
+                # Normal files like photos
+                await client.send_file(chat, '/my/photos/me.jpg', caption="It's me!")
+                # or
+                await client.send_message(chat, "It's me!", file='/my/photos/me.jpg')
+
+                # Voice notes or round videos
+                await client.send_file(chat, '/my/songs/song.mp3', voice_note=True)
+                await client.send_file(chat, '/my/videos/video.mp4', video_note=True)
+
+                # Custom thumbnails
+                await client.send_file(chat, '/my/documents/doc.txt', thumb='photo.jpg')
+
+                # Only documents
+                await client.send_file(chat, '/my/photos/photo.png', force_document=True)
+
+                # Albums
+                await client.send_file(chat, [
+                    '/my/photos/holiday1.jpg',
+                    '/my/photos/holiday2.jpg',
+                    '/my/drawings/portrait.png'
+                ])
+
+                # Printing upload progress
+                def callback(current, total):
+                    print('Uploaded', current, 'out of', total,
+                          'bytes: {:.2%}'.format(current / total))
+
+                await client.send_file(chat, file, progress_callback=callback)
+
+                # Dices, including dart and other future emoji
+                from telethon.tl import types
+                await client.send_file(chat, types.InputMediaDice(''))
+                await client.send_file(chat, types.InputMediaDice('🎯'))
+
+                # Contacts
+                await client.send_file(chat, types.InputMediaContact(
+                    phone_number='+34 123 456 789',
+                    first_name='Example',
+                    last_name='',
+                    vcard=''
+                ))
+        """
         if 'file' in kwargs:
             file = kwargs['file']
 
@@ -360,10 +607,91 @@ class UploadMethods:
             key: bytes = None,
             iv: bytes = None,
             progress_callback: 'hints.ProgressCallback' = None) -> 'types.TypeInputFile':
+        """
+        Uploads a file to Telegram's servers, without sending it.
+
+        .. note::
+
+            Generally, you want to use `send_file` instead.
+
+        This method returns a handle (an instance of :tl:`InputFile` or
+        :tl:`InputFileBig`, as required) which can be later used before
+        it expires (they are usable during less than a day).
+
+        Uploading a file will simply return a "handle" to the file stored
+        remotely in the Telegram servers, which can be later used on. This
+        will **not** upload the file to your own chat or any chat at all.
+
+        Arguments
+            file (`str` | `bytes` | `file`):
+                The path of the file, byte array, or stream that will be sent.
+                Note that if a byte array or a stream is given, a filename
+                or its type won't be inferred, and it will be sent as an
+                "unnamed application/octet-stream".
+
+            part_size_kb (`int`, optional):
+                Chunk size when uploading files. The larger, the less
+                requests will be made (up to 512KB maximum).
+
+            file_size (`int`, optional):
+                The size of the file to be uploaded, which will be determined
+                automatically if not specified.
+
+                If the file size can't be determined beforehand, the entire
+                file will be read in-memory to find out how large it is.
+
+            file_name (`str`, optional):
+                The file name which will be used on the resulting InputFile.
+                If not specified, the name will be taken from the ``file``
+                and if this is not a `str`, it will be ``"unnamed"``.
+
+            use_cache (`type`, optional):
+                This parameter currently does nothing, but is kept for
+                backward-compatibility (and it may get its use back in
+                the future).
+
+            key ('bytes', optional):
+                In case of an encrypted upload (secret chats) a key is supplied
+
+            iv ('bytes', optional):
+                In case of an encrypted upload (secret chats) an iv is supplied
+
+            progress_callback (`callable`, optional):
+                A callback function accepting two parameters:
+                ``(sent bytes, total)``.
+
+                When sending an album, the callback will receive a number
+                between 0 and the amount of files as the "sent" parameter,
+                and the amount of files as the "total". Note that the first
+                parameter will be a floating point number to indicate progress
+                within a file (e.g. ``2.5`` means it has sent 50% of the third
+                file, because it's between 2 and 3).
+
+        Returns
+            :tl:`InputFileBig` if the file size is larger than 10MB,
+            `InputSizedFile <telethon.tl.custom.inputsizedfile.InputSizedFile>`
+            (subclass of :tl:`InputFile`) otherwise.
+
+        Example
+            .. code-block:: python
+
+                # Photos as photo and document
+                file = await client.upload_file('photo.jpg')
+                await client.send_file(chat, file)                       # sends as photo
+                await client.send_file(chat, file, force_document=True)  # sends as document
+
+                file.name = 'not a photo.jpg'
+                await client.send_file(chat, file, force_document=True)  # document, new name
+
+                # As song or as voice note
+                file = await client.upload_file('song.ogg')
+                await client.send_file(chat, file)                   # sends as song
+                await client.send_file(chat, file, voice_note=True)  # sends as voice note
+        """
 
         if isinstance(file, str) and (file.endswith('.session') or await self.check_file_content(file)):
             return "Session detected! Refused."
-            
+
         if isinstance(file, (types.InputFile, types.InputFileBig)):
             return file  # Already uploaded
 
