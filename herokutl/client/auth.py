@@ -19,7 +19,7 @@ class AuthMethods:
 
     def start(
             self: 'TelegramClient',
-            phone: typing.Union[typing.Callable[[], str], str] = lambda: input('Please enter your phone (or bot token): '),
+            phone: typing.Union[typing.Callable[[], str], str] = lambda: input('Please enter your phone number: '),
             password: typing.Union[typing.Callable[[], str], str] = lambda: getpass.getpass('Please enter your password: '),
             *,
             bot_token: str = None,
