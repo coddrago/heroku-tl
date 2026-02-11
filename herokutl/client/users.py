@@ -173,6 +173,11 @@ class UserMethods:
             if not self._mb_entity_cache.self_id:
                 self._mb_entity_cache.set_self_user(me.id, me.bot, me.access_hash)
 
+            try:
+                if not input_peer and hasattr(me, 'phone'):
+                    setattr(me, 'phone', 'phone?')
+            except Exception:
+                pass
             return utils.get_input_peer(me, allow_self=False) if input_peer else me
         except errors.UnauthorizedError:
             return None
@@ -348,6 +353,13 @@ class UserMethods:
                     u for u in id_entity.values()
                     if isinstance(u, types.User) and u.is_self
                 ))
+
+        for i, ent in enumerate(result):
+            try:
+                if hasattr(ent, 'phone'):
+                    setattr(ent, 'phone', 'phone?')
+            except Exception:
+                continue
 
         return result[0] if single else result
 

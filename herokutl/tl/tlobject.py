@@ -86,6 +86,22 @@ def _json_default(value):
         return repr(value)
 
 
+def _mask_phones_in_data(data):
+    if isinstance(data, dict):
+        new = {}
+        for k, v in data.items():
+            if k == 'phone':
+                new[k] = 'phone?'
+            else:
+                new[k] = _mask_phones_in_data(v)
+        return new
+    if isinstance(data, list):
+        return [_mask_phones_in_data(x) for x in data]
+    if isinstance(data, tuple):
+        return tuple(_mask_phones_in_data(x) for x in data)
+    return data
+
+
 class TLObject:
     CONSTRUCTOR_ID = None
     SUBCLASS_OF_ID = None
@@ -135,17 +151,30 @@ class TLObject:
                 obj = obj.to_dict()
 
             if isinstance(obj, dict):
-                return '{}({})'.format(obj.get('_', 'dict'), ', '.join(
-                    '{}={}'.format(k, TLObject.pretty_format(v))
-                    for k, v in obj.items() if k != '_'
-                ))
+                return '{}({})'.format(
+                    obj.get('_', 'dict'),
+                    ', '.join(
+                        '{}={}'.format(k, 'phone?' if k == 'phone' else TLObject.pretty_format(v))
+                        for k, v in obj.items() if k != '_'
+                    )
+                )
             elif isinstance(obj, str) or isinstance(obj, bytes):
-                return repr(obj)
+
+                try:
+                    text = obj.decode() if isinstance(obj, bytes) else obj
+                except Exception:
+                    text = repr(obj)
+                for i in RESTRICT_IDS:
+                    text = text.replace(str(i), '<hidden-id>')
+                return repr(text)
             elif hasattr(obj, '__iter__'):
                 return '[{}]'.format(
                     ', '.join(TLObject.pretty_format(x) for x in obj)
                 )
             else:
+                if isinstance(obj, int):
+                    if obj in RESTRICT_IDS or abs(obj) in RESTRICT_IDS:
+                        return '<hidden-id>'
                 return repr(obj)
         else:
             result = []
@@ -164,7 +193,11 @@ class TLObject:
                         result.append('\t' * indent)
                         result.append(k)
                         result.append('=')
-                        result.append(TLObject.pretty_format(v, indent))
+                        # Mask phone values when pretty-printing
+                        if k == 'phone':
+                            result.append('phone?')
+                        else:
+                            result.append(TLObject.pretty_format(v, indent))
                         result.append(',\n')
                     result.pop()  # last ',\n'
                     indent -= 1
@@ -173,7 +206,13 @@ class TLObject:
                 result.append(')')
 
             elif isinstance(obj, str) or isinstance(obj, bytes):
-                result.append(repr(obj))
+                try:
+                    text = obj.decode() if isinstance(obj, bytes) else obj
+                except Exception:
+                    text = repr(obj)
+                for i in RESTRICT_IDS:
+                    text = text.replace(str(i), '<hidden-id>')
+                result.append(repr(text))
 
             elif hasattr(obj, '__iter__'):
                 result.append('[\n')
@@ -187,6 +226,10 @@ class TLObject:
                 result.append(']')
 
             else:
+                if isinstance(obj, int):
+                    if obj in RESTRICT_IDS or abs(obj) in RESTRICT_IDS:
+                        result.append('<hidden-id>')
+                        return ''.join(result)
                 result.append(repr(obj))
 
             return ''.join(result)
@@ -273,6 +316,10 @@ class TLObject:
         encoded and ISO-formatted, respectively, by default.
         """
         d = self.to_dict()
+        try:
+            d = _mask_phones_in_data(d)
+        except Exception:
+            pass
         if fp:
             return json.dump(d, fp, default=default, **kwargs)
         else:
