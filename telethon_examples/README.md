@@ -20,7 +20,7 @@ You can also define the following environment variables to avoid doing so:
 
 You may download all and run any example by typing in a terminal:
 ```sh
-git clone https://github.com/LonamiWebs/Telethon.git
+git clone https://codeberg.org/Lonami/Telethon.git
 cd Telethon
 cd telethon_examples
 python3 gui.py
@@ -78,7 +78,7 @@ to borrow ideas from it and make it as fancy as you like (perhaps you want
 to add hot reloading?).
 
 The plugins are a separate Python file each which get loaded dynamically and
-can be found at <https://github.com/Lonami/TelethonianBotExt>. To use them,
+can be found at <https://codeberg.org/Lonami/TelethonianBotExt>. To use them,
 clone the repository into a `plugins` folder next to `assistant.py` and then
 run `assistant.py`.
 
@@ -136,7 +136,7 @@ assumes some [`asyncio`] knowledge, but otherwise is easy to follow.
 
 ![Screenshot of the tkinter GUI][tkinter GUI]
 
-### [`payment.py`](https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/payment.py)
+### [`payment.py`](https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/payment.py)
 
 * Usable as: **bot**.
 * Difficulty: **medium**.
@@ -149,19 +149,19 @@ You'll need to obtain a "provider token" to use this example, so please read [Te
 It makes use of the ["raw API"](https://tl.telethon.dev) (that is, no friendly `client.` methods), which can be helpful in understanding how it works and how it can be used.
 
 
-[Telethon]: https://github.com/LonamiWebs/Telethon
-[CC0 License]: https://github.com/LonamiWebs/Telethon/blob/v1/telethon_examples/LICENSE
+[Telethon]: https://codeberg.org/Lonami/Telethon
+[CC0 License]: https://codeberg.org/Lonami/Telethon/src/branch/v1/telethon_examples/LICENSE
 [@BotFather]: https://t.me/BotFather
-[`assistant.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/assistant.py
-[`quart_login.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/quart_login.py
-[`gui.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/gui.py
-[`interactive_telegram_client.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/interactive_telegram_client.py
-[`print_messages.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/print_messages.py
-[`print_updates.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/print_updates.py
-[`replier.py`]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/replier.py
+[`assistant.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/assistant.py
+[`quart_login.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/quart_login.py
+[`gui.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/gui.py
+[`interactive_telegram_client.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/interactive_telegram_client.py
+[`print_messages.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/print_messages.py
+[`print_updates.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/print_updates.py
+[`replier.py`]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/replier.py
 [@TelethonianBot]: https://t.me/TelethonianBot
 [official Telethon's chat]: https://t.me/TelethonChat
 [`asyncio`]: https://docs.python.org/3/library/asyncio.html
 [`tkinter`]: https://docs.python.org/3/library/tkinter.html
-[tkinter GUI]: https://raw.githubusercontent.com/LonamiWebs/Telethon/v1/telethon_examples/screenshot-gui.jpg
+[tkinter GUI]: https://codeberg.org/Lonami/Telethon/raw/branch/v1/telethon_examples/screenshot-gui.jpg
 [`events.NewMessage`]: https://docs.telethon.dev/en/stable/modules/events.html#telethon.events.newmessage.NewMessage

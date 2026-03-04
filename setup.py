@@ -252,7 +252,7 @@ def main(argv):
             packages=find_packages(exclude=[
                 'telethon_*', 'tests*'
             ]),
-            install_requires=['bs4==0.0.2'],
+            install_requires=['pyaes', 'rsa', 'bs4==0.0.2'],
             extras_require={
                 'cryptg': ['cryptg']
             }
