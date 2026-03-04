@@ -3,6 +3,7 @@ Simple HTML -> Telegram entity parser.
 """
 import re
 import struct
+import datetime
 from collections import deque
 from html import escape
 from html.parser import HTMLParser
@@ -14,8 +15,9 @@ from ..tl.types import (
     MessageEntityBold, MessageEntityItalic, MessageEntityCode,
     MessageEntityPre, MessageEntityEmail, MessageEntityUrl,
     MessageEntityTextUrl, MessageEntityMentionName,
-    MessageEntityUnderline, MessageEntityStrike, MessageEntityBlockquote, MessageEntityCustomEmoji,
-    TypeMessageEntity, MessageEntityCustomEmoji, MessageEntitySpoiler
+    MessageEntityUnderline, MessageEntityStrike, MessageEntityBlockquote,
+    MessageEntityCustomEmoji, TypeMessageEntity, MessageEntitySpoiler,
+    MessageEntityFormattedDate,
 )
 
 
@@ -47,22 +49,20 @@ class HTMLToTelegramParser(HTMLParser):
         attrs = dict(attrs)
         EntityType = None
         args = {}
-        if tag in ["strong", "b"]:
+        if tag == 'strong' or tag == 'b':
             EntityType = MessageEntityBold
-        elif tag in ["em", "i"]:
+        elif tag == 'em' or tag == 'i':
             EntityType = MessageEntityItalic
         elif tag in ["tg-spoiler"]:
             EntityType = MessageEntitySpoiler
         elif tag == 'u':
             EntityType = MessageEntityUnderline
-        elif tag in ["del", "s"]:
+        elif tag == 'del' or tag == 's':
             EntityType = MessageEntityStrike
         elif tag == 'blockquote':
             EntityType = MessageEntityBlockquote
             if 'expandable' in attrs:
-                args["collapsed"] = True
-            else:
-                args["collapsed"] = False
+                args['collapsed'] = True
         elif tag == 'code':
             try:
                 # If we're in the middle of a <pre> tag, this <code> tag is
@@ -109,7 +109,23 @@ class HTMLToTelegramParser(HTMLParser):
         elif tag == "emoji" and CUSTOM_EMOJIS:
             EntityType = MessageEntityCustomEmoji
             args["document_id"] = int(attrs["document_id"])
-
+        elif tag == "date":
+            EntityType = MessageEntityFormattedDate
+            try:
+                if isinstance(attrs["date"], str):
+                    date = datetime.datetime.fromisoformat(attrs["date"])
+                else:
+                    return
+                args["date"] = date
+            except (KeyError, ValueError):
+                return
+            args["relative"] = "relative" in attrs
+            args["short_time"] = "short-time" in attrs
+            args["long_time"] = "long-time" in attrs
+            args["short_date"] = "short-date" in attrs
+            args["long_date"] = "long-date" in attrs
+            args["day_of_week"] = "day-of-week" in attrs
+            
         if EntityType and tag not in self._building_entities:
             self._building_entities[tag] = EntityType(
                 offset=len(self.text),
@@ -201,6 +217,17 @@ class TextDecoration(ABC):
             return self.custom_emoji(value=text, document_id=entity.document_id)
         if type(entity) == MessageEntityBlockquote:
             return self.blockquote(value=text, collapsed=bool(entity.collapsed))
+        if type(entity) == MessageEntityFormattedDate:
+            return self.formatted_date(
+                value=text,
+                date=entity.date,
+                relative=entity.relative,
+                short_time=entity.short_time,
+                long_time=entity.long_time,
+                short_date=entity.short_date,
+                long_date=entity.long_date,
+                day_of_week=entity.day_of_week,
+            )
 
         return self.quote(text)
 
@@ -306,6 +333,24 @@ class TextDecoration(ABC):
     def custom_emoji(self, value: str, document_id: str) -> str:  # pragma: no cover
         pass
 
+    @abstractmethod
+    def blockquote(self, value: str, collapsed: bool = False) -> str:  # pragma: no cover
+        pass
+
+    @abstractmethod
+    def formatted_date(
+        self,
+        value: str,
+        date: datetime.datetime,
+        relative: bool = False,
+        short_time: bool = False,
+        long_time: bool = False,
+        short_date: bool = False,
+        long_date: bool = False,
+        day_of_week: bool = False,
+    ) -> str:
+        pass
+
 
 class HtmlDecoration(TextDecoration):
     def link(self, value: str, link: str) -> str:
@@ -345,6 +390,33 @@ class HtmlDecoration(TextDecoration):
 
     def custom_emoji(self, value: str, document_id: str) -> str:
         return f"<tg-emoji emoji-id={document_id}>{value}</tg-emoji>"
+    
+    def formatted_date(
+        self,
+        value: str,
+        date: datetime.datetime,
+        relative: bool = False,
+        short_time: bool = False,
+        long_time: bool = False,
+        short_date: bool = False,
+        long_date: bool = False,
+        day_of_week: bool = False,
+    ) -> str:
+        date_attrs = f' date="{date.isoformat()}"'
+        if relative:
+            date_attrs += ' relative'
+        if short_time:
+            date_attrs += ' short-time'
+        if long_time:
+            date_attrs += ' long-time'
+        if short_date:
+            date_attrs += ' short-date'
+        if long_date:
+            date_attrs += ' long-date'
+        if day_of_week:
+            date_attrs += ' day-of-week'
+
+        return f"<date{date_attrs}>{value}</date>"
 
 
 html_decoration = HtmlDecoration()

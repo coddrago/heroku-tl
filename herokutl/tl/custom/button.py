@@ -45,7 +45,14 @@ class Button:
         self.selective = selective
         self.persistent = persistent
         self.placeholder = placeholder
-
+    @staticmethod
+    def _get_style(style=None, icon=None):
+        """
+        Returns `KeyboardButtonStyle` by an appropriate mapping.
+        """
+        if style is not None and (not isinstance(style,str) or (style := style.lower()) not in {'primary','danger','success'}):
+           raise ValueError("Invalid value. Must be either one of 'primary' (blue) , 'danger' (red) and 'success' (green) , or None")
+        return types.KeyboardButtonStyle(**({f'bg_{style}': True,'icon':icon} if style else {'icon': icon}))
     @staticmethod
     def _is_inline(button):
         """
@@ -63,7 +70,7 @@ class Button:
         ))
 
     @staticmethod
-    def inline(text, data=None):
+    def inline(text, data=None, style=None, icon=None):
         """
         Creates a new inline button with some payload data in it.
 
@@ -88,10 +95,10 @@ class Button:
         if len(data) > 64:
             raise ValueError('Too many bytes for the data')
 
-        return types.KeyboardButtonCallback(text, data)
+        return types.KeyboardButtonCallback(text, data, style=Button._get_style(style, icon))
 
     @staticmethod
-    def switch_inline(text, query='', same_peer=False):
+    def switch_inline(text, query='', same_peer=False, style=None, icon=None):
         """
         Creates a new inline button to switch to inline query.
 
@@ -106,10 +113,10 @@ class Button:
         input field will be filled with the username of your bot followed
         by the query text, ready to make inline queries.
         """
-        return types.KeyboardButtonSwitchInline(text, query, same_peer)
+        return types.KeyboardButtonSwitchInline(text, query, same_peer, style=Button._get_style(style, icon))
 
     @staticmethod
-    def url(text, url=None):
+    def url(text, url=None, style=None, icon=None):
         """
         Creates a new inline button to open the desired URL on click.
 
@@ -122,10 +129,10 @@ class Button:
         the domain is trusted, and once confirmed the URL will open in their
         device.
         """
-        return types.KeyboardButtonUrl(text, url or text)
+        return types.KeyboardButtonUrl(text, url or text, style=Button._get_style(style, icon))
 
     @staticmethod
-    def auth(text, url=None, *, bot=None, write_access=False, fwd_text=None):
+    def auth(text, url=None, style=None, icon=None, *, bot=None, write_access=False, fwd_text=None):
         """
         Creates a new inline button to authorize the user at the given URL.
 
@@ -167,12 +174,13 @@ class Button:
             url=url or text,
             bot=utils.get_input_user(bot or types.InputUserSelf()),
             request_write_access=write_access,
-            fwd_text=fwd_text
+            fwd_text=fwd_text,
+            style=Button._get_style(style, icon)
         )
 
     @classmethod
     def text(cls, text, *, resize=None, single_use=None, selective=None,
-             persistent=None, placeholder=None):
+             persistent=None, placeholder=None, style=None, icon=None):
         """
         Creates a new keyboard button with the given text.
 
@@ -210,7 +218,7 @@ class Button:
         same text on their own.
         """
         return cls(
-            types.KeyboardButton(text),
+            types.KeyboardButton(text, style=cls._get_style(style, icon)),
             resize=resize,
             single_use=single_use,
             selective=selective,
@@ -219,7 +227,7 @@ class Button:
         )
 
     @classmethod
-    def request_location(cls, text, *, resize=None, single_use=None, selective=None,
+    def request_location(cls, text, style=None, icon=None, *, resize=None, single_use=None, selective=None,
                          persistent=None, placeholder=None):
         """
         Creates a new keyboard button to request the user's location on click.
@@ -232,7 +240,7 @@ class Button:
         bot, and if confirmed a message with geo media will be sent.
         """
         return cls(
-            types.KeyboardButtonRequestGeoLocation(text),
+            types.KeyboardButtonRequestGeoLocation(text, style=cls._get_style(style, icon)),
             resize=resize,
             single_use=single_use,
             selective=selective,
@@ -241,7 +249,7 @@ class Button:
         )
 
     @classmethod
-    def request_phone(cls, text, *, resize=None, single_use=None,
+    def request_phone(cls, text, style=None, icon=None, *, resize=None, single_use=None,
                       selective=None, persistent=None, placeholder=None):
         """
         Creates a new keyboard button to request the user's phone on click.
@@ -254,7 +262,7 @@ class Button:
         bot, and if confirmed a message with contact media will be sent.
         """
         return cls(
-            types.KeyboardButtonRequestPhone(text),
+            types.KeyboardButtonRequestPhone(text, style=cls._get_style(style, icon)),
             resize=resize,
             single_use=single_use,
             selective=selective,
@@ -263,7 +271,7 @@ class Button:
         )
 
     @classmethod
-    def request_poll(cls, text, *, force_quiz=False, resize=None, single_use=None,
+    def request_poll(cls, text, style=None, icon=None, *, force_quiz=False, resize=None, single_use=None,
                      selective=None, persistent=None, placeholder=None):
         """
         Creates a new keyboard button to request the user to create a poll.
@@ -283,7 +291,7 @@ class Button:
         poll will be shown, and if they do create one, the poll will be sent.
         """
         return cls(
-            types.KeyboardButtonRequestPoll(text, quiz=force_quiz),
+            types.KeyboardButtonRequestPoll(text, quiz=force_quiz, style=cls._get_style(style, icon)),
             resize=resize,
             single_use=single_use,
             selective=selective,
@@ -317,7 +325,7 @@ class Button:
             placeholder=placeholder)
 
     @staticmethod
-    def buy(text):
+    def buy(text, style=None, icon=None):
         """
         Creates a new inline button to buy a product.
 
@@ -329,10 +337,10 @@ class Button:
         `Payments API <https://core.telegram.org/api/payments>`__
         documentation for more information.
         """
-        return types.KeyboardButtonBuy(text)
+        return types.KeyboardButtonBuy(text, style=Button._get_style(style, icon))
 
     @staticmethod
-    def game(text):
+    def game(text, style=None, icon=None):
         """
         Creates a new inline button to start playing a game.
 
@@ -343,4 +351,4 @@ class Button:
         `Games <https://core.telegram.org/api/bots/games>`__
         documentation for more information on using games.
         """
-        return types.KeyboardButtonGame(text)
+        return types.KeyboardButtonGame(text, style=Button._get_style(style, icon))

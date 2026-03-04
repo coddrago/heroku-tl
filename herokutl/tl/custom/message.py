@@ -196,6 +196,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         paid_suggested_post_ton: Optional[bool] = None,
         from_id: Optional[types.TypePeer] = None,
         from_boosts_applied: Optional[int] = None,
+        from_rank: Optional[str] = None,
         saved_peer_id: Optional[types.TypePeer] = None,
         fwd_from: Optional[types.TypeMessageFwdHeader] = None,
         via_bot_id: Optional[int] = None,
@@ -247,6 +248,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         self.paid_suggested_post_ton = paid_suggested_post_ton
         self.from_id = from_id
         self.from_boosts_applied = from_boosts_applied
+        self.from_rank = from_rank
         self.saved_peer_id = saved_peer_id
         self.fwd_from = fwd_from
         self.via_bot_id = via_bot_id

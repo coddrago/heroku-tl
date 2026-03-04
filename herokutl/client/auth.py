@@ -19,7 +19,7 @@ class AuthMethods:
 
     def start(
             self: 'TelegramClient',
-            phone: typing.Union[typing.Callable[[], str], str] = lambda: input('Please enter your phone number: '),
+            phone: typing.Union[typing.Callable[[], str], str] = lambda: input('Please enter your phone number: '), # skip merge
             password: typing.Union[typing.Callable[[], str], str] = lambda: getpass.getpass('Please enter your password: '),
             *,
             bot_token: str = None,
