@@ -111,6 +111,7 @@ class HTMLToTelegramParser(HTMLParser):
             args["document_id"] = int(attrs["document_id"])
         elif tag == "date":
             EntityType = MessageEntityFormattedDate
+            print(attrs) # debug
             try:
                 if isinstance(attrs["date"], str):
                     date = datetime.datetime.fromisoformat(attrs["date"])
