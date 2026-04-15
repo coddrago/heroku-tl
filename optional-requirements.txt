@@ -1,0 +1,5 @@
+cryptg
+python-socks[asyncio]
+hachoir
+pillow
+isal
