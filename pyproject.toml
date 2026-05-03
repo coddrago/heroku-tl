@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "herokutl"
+name = "heroku-tl-new"
 dynamic = ["version"]
 description = "This library is built for the Heroku userbot and is based on Telethon."
 readme = "README.rst"
