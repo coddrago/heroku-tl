@@ -13,6 +13,49 @@ it can take advantage of new goodies!
 
 .. contents:: List of All Versions
 
+Support for building with Hatch (v1.43)
+=======================================
+
++------------------------+
+| Scheme layer used: 224 |
++------------------------+
+
+`View new and changed raw API methods <https://diff.telethon.dev/?from=216&to=224>`__.
+
+With ``setup.py`` no longer being the recommended way to go about packaging applications,
+I've followed the ``hatch new --init`` procedure and cleaned up the ``pyproject.toml`` a bit.
+
+The unused ``tox`` configuration has been removed, and a separate ``hatch_build.py`` hook
+will take care of generating the TL types during install.
+
+For now I have no plans to further remove or cleanup the old ``setuptools`` installation method.
+So it should remain possible to use that for as long as it works.
+
+Additions
+~~~~~~~~~
+
+* More RPC error classes.
+* Warning when trying to use a proxy without ``python-socks`` installed.
+* Styles now supported on inline buttons.
+
+Enhancements
+~~~~~~~~~~~~
+
+* No longer hosted on GitHub.
+* The project now has a policy against AI.
+* Some documentation typos have been corrected.
+* Any RPC error should now be treated as a transient error while getting difference.
+* HTML blockquote can now be expandable.
+
+Bug fixes
+~~~~~~~~~
+
+* Python 3.14 compatibility.
+* The library should now be importable without having ``sqlite3`` (again).
+* ``InvalidBufferError`` was not being handled correctly when receiving incomplete data.
+* ``iter_messages`` on scheduled and reverse should no longer crash.
+
+
 New layer (v1.42)
 =================
 

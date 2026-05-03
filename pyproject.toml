@@ -1,36 +1,58 @@
-# https://snarky.ca/what-the-heck-is-pyproject-toml/
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-# Need to use legacy format for the time being
-# https://tox.readthedocs.io/en/3.20.0/example/basic.html#pyproject-toml-tox-legacy-ini
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py35,py36,py37,py38
+[project]
+name = "herokutl"
+dynamic = ["version"]
+description = "This library is built for the Heroku userbot and is based on Telethon."
+readme = "README.rst"
+license = "MIT"
+requires-python = ">=3.5"
+authors = [
+    { name = "Codrago", email = "codrago@xyecoc.com" },
+]
+keywords = [
+    "api",
+    "chat",
+    "client",
+    "library",
+    "messaging",
+    "mtproto",
+    "telegram",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Communications :: Chat",
+]
+dependencies = [
+    "pyaes",
+    "rsa",
+    "bs4==0.0.2",
+]
 
-# run with tox -e py
-[testenv]
-deps =
-    -rrequirements.txt
-    -roptional-requirements.txt
-    -rdev-requirements.txt
-commands =
-    # NOTE: you can run any command line tool here - not just tests
-    pytest {posargs}
+[project.optional-dependencies]
+cryptg = [
+    "cryptg",
+]
 
-# run with tox -e flake
-[testenv:flake]
-deps =
-    -rrequirements.txt
-    -roptional-requirements.txt
-    -rdev-requirements.txt
-    flake8
-commands =
-    # stop the build if there are Python syntax errors or undefined names
-    flake8 telethon/ telethon_generator/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-    # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-    flake8 telethon/ telethon_generator/ tests/ --count --exit-zero --exclude telethon/tl/,telethon/errors/rpcerrorlist.py --max-complexity=10 --max-line-length=127 --statistics
+[project.urls]
+Homepage = "https://github.com/coddrago/heroku-tl"
+Source = "https://github.com/coddrago/heroku-tl"
+Download = "https://pypi.org/project/heroku-tl-new/"
 
-"""
+[tool.hatch.version]
+path = "herokutl/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/herokutl",
+]
+
+[tool.hatch.build.hooks.custom]

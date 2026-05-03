@@ -31,26 +31,26 @@ TIMED_OUT_SLEEP = 1
 class _CdnRedirect(Exception):
     def __init__(self, cdn_redirect=None):
         self.cdn_redirect = cdn_redirect
-      
-  
+
+
 class _DirectDownloadIter(RequestIter):
     async def _init(
             self, file, dc_id, offset, stride, chunk_size, request_size, file_size, msg_data, cdn_redirect=None):
         self.request = functions.upload.GetFileRequest(
-            file, offset=offset, limit=request_size) 
+            file, offset=offset, limit=request_size)
         self._client = self.client
         self._cdn_redirect = cdn_redirect
         if cdn_redirect is not None:
           self.request = functions.upload.GetCdnFileRequest(cdn_redirect.file_token, offset=offset, limit=request_size)
           self._client = await self.client._get_cdn_client(cdn_redirect)
-        
+
         self.total = file_size
         self._stride = stride
         self._chunk_size = chunk_size
         self._last_part = None
         self._msg_data = msg_data
         self._timed_out = False
-        
+
         self._exported = dc_id and self._client.session.dc_id != dc_id
         if not self._exported:
             # The used sender will also change if ``FileMigrateError`` occurs
@@ -1054,8 +1054,8 @@ class DownloadMethods:
                 isreserved = getattr(os.path, 'isreserved', lambda _: False)  # Python 3.13 and above
                 name = None if possible_names is None else next(
                     x  # basename to prevent path traversal (#4713)
-                    for x in map(os.path.basename, possible_names)
-                    if x and not isreserved(x)
+                    for x in map(os.path.basename, filter(None, possible_names))
+                    if not isreserved(x)
                 )
             except StopIteration:
                 name = None

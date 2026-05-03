@@ -420,4 +420,4 @@ file and run that, or use the normal ``python`` interpreter.
 .. _@SpamBot: https://t.me/SpamBot
 .. _issue 297: https://github.com/LonamiWebs/Telethon/issues/297
 .. _issue 3759: https://github.com/LonamiWebs/Telethon/issues/3759
-.. _quart_login.py: https://github.com/LonamiWebs/Telethon/tree/v1/telethon_examples#quart_loginpy
+.. _quart_login.py: https://codeberg.org/Lonami/Telethon/src/branch/v1/telethon_examples#quart_login-py

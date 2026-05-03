@@ -8,17 +8,15 @@ import inspect
 import io
 import itertools
 import logging
-import math
 import mimetypes
 import os
 import pathlib
 import re
 import struct
-import warnings
 from collections import namedtuple
 from mimetypes import guess_extension
 from types import GeneratorType
-import typing
+import typing # skip merge
 
 from .extensions import markdown, html
 from .helpers import add_surrogate, del_surrogate, strip_text

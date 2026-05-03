@@ -25,7 +25,7 @@ you can run the following command instead:
 
 .. code-block:: sh
 
-    python3 -m pip install --upgrade https://github.com/LonamiWebs/Telethon/archive/v1.zip
+    python3 -m pip install --upgrade https://codeberg.org/Lonami/Telethon/archive/v1.zip
 
 .. note::
 
@@ -33,7 +33,7 @@ you can run the following command instead:
     use. However, when you are `reporting a library bug`__, you should try if the
     bug still occurs in this version.
 
-.. __: https://github.com/LonamiWebs/Telethon/issues/
+.. __: https://codeberg.org/Lonami/Telethon/issues/
 
 
 Verification

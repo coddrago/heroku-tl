@@ -354,7 +354,7 @@ class UserMethods:
                     if isinstance(u, types.User) and u.is_self
                 ))
 
-        for i, ent in enumerate(result):
+        for ent in result:
             try:
                 if hasattr(ent, 'phone'):
                     setattr(ent, 'phone', 'phone?')

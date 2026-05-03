@@ -326,11 +326,11 @@ Key differences:
 .. _Bot FAQ: https://core.telegram.org/bots/faq
 .. _tdlib: https://core.telegram.org/tdlib
 .. _MTProto: https://core.telegram.org/mtproto
-.. _MTProto vs HTTP Bot API: https://github.com/LonamiWebs/Telethon/wiki/MTProto-vs-HTTP-Bot-API
+.. _MTProto vs HTTP Bot API: https://codeberg.org/Lonami/Telethon/wiki/MTProto-vs-HTTP-Bot-API
 .. _requests: https://pypi.org/project/requests/
 .. _python-telegram-bot: https://python-telegram-bot.readthedocs.io
 .. _pyTelegramBotAPI: https://github.com/eternnoir/pyTelegramBotAPI
 .. _aiohttp: https://docs.aiohttp.org/en/stable
 .. _aiogram: https://aiogram.readthedocs.io
-.. _dumbot: https://github.com/Lonami/dumbot
+.. _dumbot: https://codeberg.org/Lonami/dumbot
 .. _echobot.py: https://github.com/python-telegram-bot/python-telegram-bot/blob/master/examples/echobot.py

@@ -296,7 +296,6 @@ class TelegramBaseClient(abc.ABC):
             try:
                 session = SQLiteSession(str(session))
             except ImportError:
-                import warnings
                 warnings.warn(
                     'The sqlite3 module is not available under this '
                     'Python installation and no custom session '

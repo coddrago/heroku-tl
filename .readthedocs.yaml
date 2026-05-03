@@ -5,6 +5,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
+  jobs:
+    post_install:
+      - python gentl.py
 
 sphinx:
   configuration: readthedocs/conf.py
