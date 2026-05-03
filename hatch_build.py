@@ -14,7 +14,7 @@ except ImportError:
 
 # Needed since we're importing local files
 GENERATOR_DIR = Path('telethon_generator')
-LIBRARY_DIR = Path('telethon')
+LIBRARY_DIR = Path('herokutl')
 
 ERRORS_IN = GENERATOR_DIR / 'data/errors.csv'
 ERRORS_OUT = LIBRARY_DIR / 'errors/rpcerrorlist.py'
