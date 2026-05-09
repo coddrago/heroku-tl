@@ -201,6 +201,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         fwd_from: Optional[types.TypeMessageFwdHeader] = None,
         via_bot_id: Optional[int] = None,
         via_business_bot_id: Optional[int] = None,
+        guestchat_via_from: Optional[types.TypePeer] = None,
         reply_to: Optional[types.TypeMessageReplyHeader] = None,
         media: Optional[types.TypeMessageMedia] = None,
         reply_markup: Optional[types.TypeReplyMarkup] = None,
@@ -253,6 +254,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         self.fwd_from = fwd_from
         self.via_bot_id = via_bot_id
         self.via_business_bot_id = via_business_bot_id
+        self.guestchat_via_from = guestchat_via_from
         self.reply_to = reply_to
         self.media = None if isinstance(media, types.MessageMediaEmpty) else media
         self.reply_markup = reply_markup

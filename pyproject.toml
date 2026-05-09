@@ -46,6 +46,8 @@ cryptg = [
 Homepage = "https://github.com/coddrago/heroku-tl"
 Source = "https://github.com/coddrago/heroku-tl"
 Download = "https://pypi.org/project/heroku-tl-new/"
+Documentation = "https://docs.telethon.dev"
+Reference = "https://tl.telethon.dev"
 
 [tool.hatch.version]
 path = "herokutl/version.py"

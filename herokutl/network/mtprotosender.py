@@ -866,7 +866,7 @@ class MTProtoSender:
         # TODO save these salts and automatically adjust to the
         # correct one whenever the salt in use expires.
         self._log.debug('Handling future salts for message %d', message.msg_id)
-        state = self._pending_state.pop(message.msg_id, None)
+        state = self._pending_state.pop(message.obj.req_msg_id, None)
         if state:
             state.future.set_result(message.obj)
 
