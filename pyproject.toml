@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "heroku-tl-new"
+name = "herokutl"
 dynamic = ["version"]
 description = "This library is built for the Heroku userbot and is based on Telethon."
 readme = "README.rst"
@@ -45,7 +45,7 @@ cryptg = [
 [project.urls]
 Homepage = "https://github.com/coddrago/heroku-tl"
 Source = "https://github.com/coddrago/heroku-tl"
-Download = "https://pypi.org/project/heroku-tl-new/"
+Download = "https://pypi.org/project/herokutl/"
 Documentation = "https://docs.telethon.dev"
 Reference = "https://tl.telethon.dev"
 

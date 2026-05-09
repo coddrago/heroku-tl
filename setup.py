@@ -184,7 +184,7 @@ def main(argv):
             print('Packaging for PyPi aborted, importing the module failed.')
             return
 
-        remove_dirs = ['__pycache__', 'build', 'dist', 'Heroku-TL.egg-info']
+        remove_dirs = ['__pycache__', 'build', 'dist', 'herokutl.egg-info']
         for root, _dirs, _files in os.walk(LIBRARY_DIR, topdown=False):
             # setuptools is including __pycache__ for some reason (#1605)
             if root.endswith('/__pycache__'):
@@ -195,7 +195,7 @@ def main(argv):
         run('python3 setup.py sdist', shell=True)
         run('python3 setup.py bdist_wheel', shell=True)
         run('twine upload dist/*', shell=True)
-        for x in ('build', 'dist', 'Heroku-TL.egg-info'):
+        for x in ('build', 'dist', 'herokutl.egg-info'):
             shutil.rmtree(x, ignore_errors=True)
 
     else:
@@ -211,14 +211,14 @@ def main(argv):
             version = re.search(r"^__version__\s*=\s*'(.*)'.*$",
                                 f.read(), flags=re.MULTILINE).group(1)
         setup(
-            name='heroku-tl-new',
+            name='herokutl',
             version=version,
             description="This library is built for the Heroku userbot and is based on Telethon.",
             long_description=long_description,
             long_description_content_type="text/markdown",
 
             url='https://github.com/coddrago/heroku-tl',
-            download_url='https://pypi.org/project/heroku-tl-new/',
+            download_url='https://pypi.org/project/herokutl/',
 
             author='Codrago',
             author_email='codrago@xyecoc.com',

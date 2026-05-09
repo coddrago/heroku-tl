@@ -13,7 +13,7 @@ Telegram is a popular messaging application. This library is meant to make it ea
 ## Installing
 
 ```sh
-pip3 install heroku-tl-new
+pip3 install herokutl
 ```
 
 ## Creating a client
