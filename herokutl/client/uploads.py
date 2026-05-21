@@ -156,6 +156,7 @@ class UploadMethods:
             supports_streaming: bool = False,
             schedule: 'hints.DateLike' = None,
             comment_to: 'typing.Union[int, types.Message]' = None,
+            spoiler: bool = False,
             ttl: int = None,
             nosound_video: bool = None,
             send_as: typing.Optional['hints.EntityLike'] = None,
@@ -328,6 +329,11 @@ class UploadMethods:
                 This parameter takes precedence over ``reply_to``. If there is
                 no linked chat, `telethon.errors.sgIdInvalidError` is raised.
 
+            spoiler (`bool`, optional):
+                Whether the media should be sent covered with a spoiler.
+                This is supported by Telegram for photos, videos and other
+                documents.
+
             ttl (`int`. optional):
                 The Time-To-Live of the file (also known as "self-destruct timer"
                 or "self-destructing media"). If set, files can only be viewed for
@@ -463,7 +469,8 @@ class UploadMethods:
                     parse_mode=parse_mode, silent=silent, schedule=schedule,
                     supports_streaming=supports_streaming, clear_draft=clear_draft,
                     force_document=force_document, background=background,
-                    send_as=send_as, message_effect_id=message_effect_id
+                    spoiler=spoiler, ttl=ttl, send_as=send_as,
+                    message_effect_id=message_effect_id
                 )
                 file = file[10:]
                 captions = captions[10:]
@@ -486,7 +493,7 @@ class UploadMethods:
             attributes=attributes, allow_cache=allow_cache, thumb=thumb,
             voice_note=voice_note, video_note=video_note,
             supports_streaming=supports_streaming, ttl=ttl,
-            nosound_video=nosound_video,
+            nosound_video=nosound_video, spoiler=spoiler,
         )
 
         # e.g. invalid cast from :tl:`MessageMediaWebPage`
@@ -511,6 +518,7 @@ class UploadMethods:
                           parse_mode=(), silent=None, schedule=None,
                           supports_streaming=None, clear_draft=None,
                           force_document=False, background=None, ttl=None,
+                          spoiler=False,
                           send_as: typing.Optional['hints.EntityLike'] = None,
                           message_effect_id: typing.Optional[int] = None):
         """Specialized version of .send_file for albums"""
@@ -557,13 +565,16 @@ class UploadMethods:
             fh, fm, _ = await self._file_to_media(
                 file, supports_streaming=supports_streaming,
                 force_document=force_document, ttl=ttl,
-                progress_callback=used_callback, nosound_video=True)
+                progress_callback=used_callback, nosound_video=True,
+                spoiler=spoiler)
             if isinstance(fm, (types.InputMediaUploadedPhoto, types.InputMediaPhotoExternal)):
                 r = await self(functions.messages.UploadMediaRequest(
                     entity, media=fm
                 ))
 
                 fm = utils.get_input_media(r.photo)
+                if spoiler and hasattr(fm, 'spoiler'):
+                    fm.spoiler = True
             elif isinstance(fm, (types.InputMediaUploadedDocument, types.InputMediaDocumentExternal)):
                 r = await self(functions.messages.UploadMediaRequest(
                     entity, media=fm
@@ -571,6 +582,8 @@ class UploadMethods:
 
                 fm = utils.get_input_media(
                     r.document, supports_streaming=supports_streaming)
+                if spoiler and hasattr(fm, 'spoiler'):
+                    fm.spoiler = True
 
             if captions:
                 caption, msg_entities = captions.pop()
@@ -796,7 +809,7 @@ class UploadMethods:
             progress_callback=None, attributes=None, thumb=None,
             allow_cache=True, voice_note=False, video_note=False,
             supports_streaming=False, mime_type=None, as_image=None,
-            ttl=None, nosound_video=None):
+            ttl=None, nosound_video=None, spoiler=False):
         if not file:
             return None, None, None
 
@@ -818,7 +831,7 @@ class UploadMethods:
             # We pass all attributes since these will be used if the user
             # passed :tl:`InputFile`, and all information may be relevant.
             try:
-                return (None, utils.get_input_media(
+                media = utils.get_input_media(
                     file,
                     is_photo=as_image,
                     attributes=attributes,
@@ -827,7 +840,11 @@ class UploadMethods:
                     video_note=video_note,
                     supports_streaming=supports_streaming,
                     ttl=ttl
-                ), as_image)
+                )
+                if spoiler and hasattr(media, 'spoiler'):
+                    media.spoiler = True
+
+                return None, media, as_image
             except TypeError:
                 # Can't turn whatever was given into media
                 return None, None, as_image
@@ -845,13 +862,15 @@ class UploadMethods:
             )
         elif re.match('https?://', file):
             if as_image:
-                media = types.InputMediaPhotoExternal(file, ttl_seconds=ttl)
+                media = types.InputMediaPhotoExternal(file, ttl_seconds=ttl, spoiler=spoiler)
             else:
-                media = types.InputMediaDocumentExternal(file, ttl_seconds=ttl)
+                media = types.InputMediaDocumentExternal(file, ttl_seconds=ttl, spoiler=spoiler)
         else:
             bot_file = utils.resolve_bot_file_id(file)
             if bot_file:
                 media = utils.get_input_media(bot_file, ttl=ttl)
+                if spoiler and hasattr(media, 'spoiler'):
+                    media.spoiler = True
 
         if media:
             pass  # Already have media, don't check the rest
@@ -861,7 +880,7 @@ class UploadMethods:
                 'an HTTP URL or a valid bot-API-like file ID'.format(file)
             )
         elif as_image:
-            media = types.InputMediaUploadedPhoto(file_handle, ttl_seconds=ttl)
+            media = types.InputMediaUploadedPhoto(file_handle, ttl_seconds=ttl, spoiler=spoiler)
         else:
             attributes, mime_type = utils.get_attributes(
                 file,
@@ -891,6 +910,7 @@ class UploadMethods:
                 attributes=attributes,
                 thumb=thumb,
                 force_file=force_document and not is_image,
+                spoiler=spoiler,
                 ttl_seconds=ttl,
                 nosound_video=nosound_video
             )
