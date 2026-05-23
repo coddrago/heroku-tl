@@ -18,6 +18,7 @@ class TLMessage(TLObject):
     inlined and is unlikely to change. Thus these are only needed to
     encapsulate responses.
     """
+
     SIZE_OVERHEAD = 12
 
     def __init__(self, msg_id, seq_no, obj):
@@ -27,8 +28,8 @@ class TLMessage(TLObject):
 
     def to_dict(self):
         return {
-            '_': 'TLMessage',
-            'msg_id': self.msg_id,
-            'seq_no': self.seq_no,
-            'obj': self.obj
+            "_": "TLMessage",
+            "msg_id": self.msg_id,
+            "seq_no": self.seq_no,
+            "obj": self.obj,
         }

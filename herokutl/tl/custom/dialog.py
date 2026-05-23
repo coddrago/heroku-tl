@@ -77,6 +77,7 @@ class Dialog:
         is_channel (`bool`):
             `True` if the `entity` is a :tl:`Channel`.
     """
+
     def __init__(self, client, dialog, entities, message):
         # Both entities and messages being dicts {ID: item}
         self._client = client
@@ -85,7 +86,7 @@ class Dialog:
         self.folder_id = dialog.folder_id
         self.archived = dialog.folder_id is not None
         self.message = message
-        self.date = getattr(self.message, 'date', None)
+        self.date = getattr(self.message, "date", None)
 
         self.entity = entities[utils.get_peer_id(dialog.peer)]
         self.input_entity = utils.get_input_peer(self.entity)
@@ -100,9 +101,8 @@ class Dialog:
         self.draft = Draft(client, self.entity, self.dialog.draft)
 
         self.is_user = isinstance(self.entity, types.User)
-        self.is_group = (
-            isinstance(self.entity, (types.Chat, types.ChatForbidden)) or
-            (isinstance(self.entity, types.Channel) and self.entity.megagroup)
+        self.is_group = isinstance(self.entity, (types.Chat, types.ChatForbidden)) or (
+            isinstance(self.entity, types.Channel) and self.entity.megagroup
         )
         self.is_channel = isinstance(self.entity, types.Channel)
 
@@ -111,8 +111,7 @@ class Dialog:
         Sends a message to this dialog. This is just a wrapper around
         ``client.send_message(dialog.input_entity, *args, **kwargs)``.
         """
-        return await self._client.send_message(
-            self.input_entity, *args, **kwargs)
+        return await self._client.send_message(self.input_entity, *args, **kwargs)
 
     async def delete(self, revoke=False):
         """
@@ -150,18 +149,20 @@ class Dialog:
                 # Un-archiving
                 dialog.archive(0)
         """
-        return await self._client(functions.folders.EditPeerFoldersRequest([
-            types.InputFolderPeer(self.input_entity, folder_id=folder)
-        ]))
+        return await self._client(
+            functions.folders.EditPeerFoldersRequest(
+                [types.InputFolderPeer(self.input_entity, folder_id=folder)]
+            )
+        )
 
     def to_dict(self):
         return {
-            '_': 'Dialog',
-            'name': self.name,
-            'date': self.date,
-            'draft': self.draft,
-            'message': self.message,
-            'entity': self.entity,
+            "_": "Dialog",
+            "name": self.name,
+            "date": self.date,
+            "draft": self.draft,
+            "message": self.message,
+            "entity": self.entity,
         }
 
     def __str__(self):

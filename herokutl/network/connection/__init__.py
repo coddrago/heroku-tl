@@ -7,6 +7,6 @@ from .tcpmtproxy import (
     TcpMTProxy,
     ConnectionTcpMTProxyAbridged,
     ConnectionTcpMTProxyIntermediate,
-    ConnectionTcpMTProxyRandomizedIntermediate
+    ConnectionTcpMTProxyRandomizedIntermediate,
 )
 from .http import ConnectionHttp

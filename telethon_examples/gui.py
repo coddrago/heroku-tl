@@ -14,11 +14,11 @@ import tkinter.ttk
 from telethon import TelegramClient, events, utils
 
 # Some configuration for the app
-TITLE = 'Telethon GUI'
-SIZE = '640x280'
-REPLY = re.compile(r'\.r\s*(\d+)\s*(.+)', re.IGNORECASE)
-DELETE = re.compile(r'\.d\s*(\d+)', re.IGNORECASE)
-EDIT = re.compile(r'\.s(.+?[^\\])/(.*)', re.IGNORECASE)
+TITLE = "Telethon GUI"
+SIZE = "640x280"
+REPLY = re.compile(r"\.r\s*(\d+)\s*(.+)", re.IGNORECASE)
+DELETE = re.compile(r"\.d\s*(\d+)", re.IGNORECASE)
+EDIT = re.compile(r"\.s(.+?[^\\])/(.*)", re.IGNORECASE)
 
 
 def get_env(name, message, cast=str):
@@ -34,14 +34,15 @@ def get_env(name, message, cast=str):
 
 
 # Session name, API ID and hash to use; loaded from environmental variables
-SESSION = os.environ.get('TG_SESSION', 'gui')
-API_ID = get_env('TG_API_ID', 'Enter your API ID: ', int)
-API_HASH = get_env('TG_API_HASH', 'Enter your API hash: ')
+SESSION = os.environ.get("TG_SESSION", "gui")
+API_ID = get_env("TG_API_ID", "Enter your API ID: ", int)
+API_HASH = get_env("TG_API_HASH", "Enter your API hash: ")
 
 
 def sanitize_str(string):
-    return ''.join(x if ord(x) <= 0xffff else
-                   '{{{:x}ū}}'.format(ord(x)) for x in string)
+    return "".join(
+        x if ord(x) <= 0xFFFF else "{{{:x}ū}}".format(ord(x)) for x in string
+    )
 
 
 def callback(func):
@@ -49,6 +50,7 @@ def callback(func):
     This decorator turns `func` into a callback for Tkinter
     to be able to use, even if `func` is an awaitable coroutine.
     """
+
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
         result = func(*args, **kwargs)
@@ -62,8 +64,8 @@ def allow_copy(widget):
     """
     This helper makes `widget` readonly but allows copying with ``Ctrl+C``.
     """
-    widget.bind('<Control-c>', lambda e: None)
-    widget.bind('<Key>', lambda e: "break")
+    widget.bind("<Control-c>", lambda e: None)
+    widget.bind("<Key>", lambda e: "break")
 
 
 class App(tkinter.Tk):
@@ -78,6 +80,7 @@ class App(tkinter.Tk):
     You may prefer to have ``App.root = tkinter.Tk()``
     and create widgets with ``self.root`` as parent.
     """
+
     def __init__(self, client, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cl = client
@@ -87,23 +90,22 @@ class App(tkinter.Tk):
         self.geometry(SIZE)
 
         # Signing in row; the entry supports phone and bot token
-        self.sign_in_label = tkinter.Label(self, text='Loading...')
+        self.sign_in_label = tkinter.Label(self, text="Loading...")
         self.sign_in_label.grid(row=0, column=0)
         self.sign_in_entry = tkinter.Entry(self)
         self.sign_in_entry.grid(row=0, column=1, sticky=tkinter.EW)
-        self.sign_in_entry.bind('<Return>', self.sign_in)
-        self.sign_in_button = tkinter.Button(self, text='...',
-                                             command=self.sign_in)
+        self.sign_in_entry.bind("<Return>", self.sign_in)
+        self.sign_in_button = tkinter.Button(self, text="...", command=self.sign_in)
         self.sign_in_button.grid(row=0, column=2)
         self.code = None
 
         # The chat where to send and show messages from
-        tkinter.Label(self, text='Target chat:').grid(row=1, column=0)
+        tkinter.Label(self, text="Target chat:").grid(row=1, column=0)
         self.chat = tkinter.Entry(self)
         self.chat.grid(row=1, column=1, columnspan=2, sticky=tkinter.EW)
         self.columnconfigure(1, weight=1)
-        self.chat.bind('<Return>', self.check_chat)
-        self.chat.bind('<FocusOut>', self.check_chat)
+        self.chat.bind("<Return>", self.check_chat)
+        self.chat.bind("<FocusOut>", self.check_chat)
         self.chat.focus()
         self.chat_id = None
 
@@ -124,12 +126,13 @@ class App(tkinter.Tk):
         self.sent_text = collections.deque(maxlen=10)
 
         # Sending messages
-        tkinter.Label(self, text='Message:').grid(row=3, column=0)
+        tkinter.Label(self, text="Message:").grid(row=3, column=0)
         self.message = tkinter.Entry(self)
         self.message.grid(row=3, column=1, sticky=tkinter.EW)
-        self.message.bind('<Return>', self.send_message)
-        tkinter.Button(self, text='Send',
-                       command=self.send_message).grid(row=3, column=2)
+        self.message.bind("<Return>", self.send_message)
+        tkinter.Button(self, text="Send", command=self.send_message).grid(
+            row=3, column=2
+        )
 
         # Post-init (async, connect client)
         self.cl.loop.create_task(self.post_init())
@@ -143,9 +146,8 @@ class App(tkinter.Tk):
             self.set_signed_in(await self.cl.get_me())
         else:
             # User is not logged in, configure the button to ask them to login
-            self.sign_in_button.configure(text='Sign in')
-            self.sign_in_label.configure(
-                text='Sign in (phone/token):')
+            self.sign_in_button.configure(text="Sign in")
+            self.sign_in_label.configure(text="Sign in (phone/token):")
 
     async def on_message(self, event):
         """
@@ -160,18 +162,17 @@ class App(tkinter.Tk):
 
         # Decide a prefix (">> " for our messages, "<user>" otherwise)
         if event.out:
-            text = '>> '
+            text = ">> "
         else:
             sender = await event.get_sender()
-            text = '<{}> '.format(sanitize_str(
-                utils.get_display_name(sender)))
+            text = "<{}> ".format(sanitize_str(utils.get_display_name(sender)))
 
         # If the message has media show "(MediaType) "
         if event.media:
-            text += '({}) '.format(event.media.__class__.__name__)
+            text += "({}) ".format(event.media.__class__.__name__)
 
         text += sanitize_str(event.text)
-        text += '\n'
+        text += "\n"
 
         # Append the text to the end with a newline, and scroll to the end
         self.log.insert(tkinter.END, text)
@@ -188,7 +189,7 @@ class App(tkinter.Tk):
         This callback logs out if authorized, signs in if a code was
         sent or a bot token is input, or sends the code otherwise.
         """
-        self.sign_in_label.configure(text='Working...')
+        self.sign_in_label.configure(text="Working...")
         self.sign_in_entry.configure(state=tkinter.DISABLED)
         if await self.cl.is_user_authorized():
             await self.cl.log_out()
@@ -198,11 +199,11 @@ class App(tkinter.Tk):
         value = self.sign_in_entry.get().strip()
         if self.code:
             self.set_signed_in(await self.cl.sign_in(code=value))
-        elif ':' in value:
+        elif ":" in value:
             self.set_signed_in(await self.cl.sign_in(bot_token=value))
         else:
             self.code = await self.cl.send_code_request(value)
-            self.sign_in_label.configure(text='Code:')
+            self.sign_in_label.configure(text="Code:")
             self.sign_in_entry.configure(state=tkinter.NORMAL)
             self.sign_in_entry.delete(0, tkinter.END)
             self.sign_in_entry.focus()
@@ -214,12 +215,12 @@ class App(tkinter.Tk):
         name and disables the entry to input phone/bot token/code).
         """
         self.me = me
-        self.sign_in_label.configure(text='Signed in')
+        self.sign_in_label.configure(text="Signed in")
         self.sign_in_entry.configure(state=tkinter.NORMAL)
         self.sign_in_entry.delete(0, tkinter.END)
         self.sign_in_entry.insert(tkinter.INSERT, utils.get_display_name(me))
         self.sign_in_entry.configure(state=tkinter.DISABLED)
-        self.sign_in_button.configure(text='Log out')
+        self.sign_in_button.configure(text="Log out")
         self.chat.focus()
 
     # noinspection PyUnusedLocal
@@ -236,7 +237,7 @@ class App(tkinter.Tk):
         # If the chat ID does not exist, it was not valid and the user must
         # configure one; hint them by changing the background to red.
         if not self.chat_id:
-            self.chat.configure(bg='red')
+            self.chat.configure(bg="red")
             self.chat.focus()
             return
 
@@ -264,8 +265,10 @@ class App(tkinter.Tk):
                     await self.cl.edit_message(self.chat_id, msg_id, new)
 
                     # Notify that a replacement was made
-                    self.log.insert(tkinter.END, '(message edited: {} -> {})\n'
-                                    .format(msg_text, new))
+                    self.log.insert(
+                        tkinter.END,
+                        "(message edited: {} -> {})\n".format(msg_text, new),
+                    )
                     self.log.yview(tkinter.END)
                     return
 
@@ -279,7 +282,7 @@ class App(tkinter.Tk):
             else:
                 await self.cl.delete_messages(self.chat_id, delete)
                 # Notify that a message was deleted
-                self.log.insert(tkinter.END, '(message deleted)\n')
+                self.log.insert(tkinter.END, "(message deleted)\n")
                 self.log.yview(tkinter.END)
                 return
 
@@ -295,8 +298,7 @@ class App(tkinter.Tk):
 
         # NOTE: This part is no longer optional. It sends the message.
         # Send the message text and get back the sent message object
-        message = await self.cl.send_message(self.chat_id, text,
-                                             reply_to=reply_to)
+        message = await self.cl.send_message(self.chat_id, text, reply_to=reply_to)
 
         # Save the sent message ID and text to allow edits
         self.sent_text.append((message.id, text))
@@ -323,22 +325,21 @@ class App(tkinter.Tk):
             old = self.chat_id
             # Valid chat ID, set it and configure the colour back to white
             self.chat_id = await self.cl.get_peer_id(chat)
-            self.chat.configure(bg='white')
+            self.chat.configure(bg="white")
 
             # If the chat ID changed, clear the
             # messages that we could edit or reply
             if self.chat_id != old:
                 self.message_ids.clear()
                 self.sent_text.clear()
-                self.log.delete('1.0', tkinter.END)
+                self.log.delete("1.0", tkinter.END)
                 if not self.me.bot:
-                    for msg in reversed(
-                            await self.cl.get_messages(self.chat_id, 100)):
+                    for msg in reversed(await self.cl.get_messages(self.chat_id, 100)):
                         await self.on_message(msg)
         except ValueError:
             # Invalid chat ID, let the user know with a yellow background
             self.chat_id = None
-            self.chat.configure(bg='yellow')
+            self.chat.configure(bg="yellow")
 
 
 async def main(interval=0.05):
@@ -346,7 +347,7 @@ async def main(interval=0.05):
     try:
         await client.connect()
     except Exception as e:
-        print('Failed to connect', e, file=sys.stderr)
+        print("Failed to connect", e, file=sys.stderr)
         return
 
     app = App(client)
@@ -362,7 +363,7 @@ async def main(interval=0.05):
     except KeyboardInterrupt:
         pass
     except tkinter.TclError as e:
-        if 'application has been destroyed' not in e.args[0]:
+        if "application has been destroyed" not in e.args[0]:
             raise
     finally:
         await app.cl.disconnect()

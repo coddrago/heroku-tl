@@ -1,11 +1,13 @@
 """
 This module holds the AESModeCTR wrapper class.
 """
+
 import pyaes
 
 
 class AESModeCTR:
     """Wrapper around pyaes.AESModeOfOperationCTR mode with custom IV"""
+
     # TODO Maybe make a pull request to pyaes to support iv on CTR
 
     def __init__(self, key, iv):

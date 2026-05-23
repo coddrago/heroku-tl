@@ -6,6 +6,7 @@ class DocsWriter:
     """
     Utility class used to write the HTML files used on the documentation.
     """
+
     def __init__(self, filename, type_to_path):
         """
         Initializes the writer to the specified output file,
@@ -14,7 +15,7 @@ class DocsWriter:
         self.filename = filename
         self._parent = str(self.filename.parent)
         self.handle = None
-        self.title = ''
+        self.title = ""
 
         # Should be set before calling adding items to the menu
         self.menu_separator_tag = None
@@ -27,24 +28,23 @@ class DocsWriter:
         self.table_columns = 0
         self.table_columns_left = None
         self.write_copy_script = False
-        self._script = ''
+        self._script = ""
 
     def _rel(self, path):
         """
         Get the relative path for the given path from the current
         file by working around https://bugs.python.org/issue20012.
         """
-        return os.path.relpath(
-            str(path), self._parent).replace(os.path.sep, '/')
+        return os.path.relpath(str(path), self._parent).replace(os.path.sep, "/")
 
     # High level writing
     def write_head(self, title, css_path, default_css):
         """Writes the head part for the generated document,
-           with the given title and CSS
+        with the given title and CSS
         """
         self.title = title
         self.write(
-            '''<!DOCTYPE html>
+            """<!DOCTYPE html>
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -60,19 +60,18 @@ class DocsWriter:
           rel="stylesheet">
 </head>
 <body>
-<div id="main_div">''',
+<div id="main_div">""",
             title=title,
             rel_css=self._rel(css_path),
-            def_css=default_css
+            def_css=default_css,
         )
 
     def set_menu_separator(self, img):
         """Sets the menu separator.
-           Must be called before adding entries to the menu
+        Must be called before adding entries to the menu
         """
         if img:
-            self.menu_separator_tag = '<img src="{}" alt="/" />'.format(
-                self._rel(img))
+            self.menu_separator_tag = '<img src="{}" alt="/" />'.format(self._rel(img))
         else:
             self.menu_separator_tag = None
 
@@ -86,7 +85,7 @@ class DocsWriter:
             self.write('<ul class="horizontal">')
             self.menu_began = True
 
-        self.write('<li>')
+        self.write("<li>")
         if link:
             self.write('<a href="{}">', self._rel(link))
 
@@ -94,63 +93,59 @@ class DocsWriter:
         self.write(name)
 
         if link:
-            self.write('</a>')
-        self.write('</li>')
+            self.write("</a>")
+        self.write("</li>")
 
     def end_menu(self):
         """Ends an opened menu"""
         if not self.menu_began:
-            raise RuntimeError('No menu had been started in the first place.')
-        self.write('</ul>')
+            raise RuntimeError("No menu had been started in the first place.")
+        self.write("</ul>")
 
     def write_title(self, title, level=1, id=None):
         """Writes a title header in the document body,
-           with an optional depth level
+        with an optional depth level
         """
         if id:
-            self.write('<h{lv} id="{id}">{title}</h{lv}>',
-                       title=title, lv=level, id=id)
+            self.write('<h{lv} id="{id}">{title}</h{lv}>', title=title, lv=level, id=id)
         else:
-            self.write('<h{lv}>{title}</h{lv}>',
-                       title=title, lv=level)
+            self.write("<h{lv}>{title}</h{lv}>", title=title, lv=level)
 
     def write_code(self, tlobject):
         """Writes the code for the given 'tlobject' properly
-           formatted with hyperlinks
+        formatted with hyperlinks
         """
-        self.write('<pre>---{}---\n',
-                   'functions' if tlobject.is_function else 'types')
+        self.write("<pre>---{}---\n", "functions" if tlobject.is_function else "types")
 
         # Write the function or type and its ID
         if tlobject.namespace:
             self.write(tlobject.namespace)
-            self.write('.')
+            self.write(".")
 
-        self.write('{}#{:08x}', tlobject.name, tlobject.id)
+        self.write("{}#{:08x}", tlobject.name, tlobject.id)
 
         # Write all the arguments (or do nothing if there's none)
         for arg in tlobject.args:
-            self.write(' ')
+            self.write(" ")
             add_link = not arg.generic_definition and not arg.is_generic
 
             # "Opening" modifiers
             if arg.generic_definition:
-                self.write('{')
+                self.write("{")
 
             # Argument name
             self.write(arg.name)
-            self.write(':')
+            self.write(":")
 
             # "Opening" modifiers
             if arg.flag:
-                self.write('{}.{}?', arg.flag, arg.flag_index)
+                self.write("{}.{}?", arg.flag, arg.flag_index)
 
             if arg.is_generic:
-                self.write('!')
+                self.write("!")
 
             if arg.is_vector:
-                self.write('<a href="{}">Vector</a>&lt;',
-                           self.type_to_path('vector'))
+                self.write('<a href="{}">Vector</a>&lt;', self.type_to_path("vector"))
 
             # Argument type
             if arg.type:
@@ -158,65 +153,67 @@ class DocsWriter:
                     self.write('<a href="{}">', self.type_to_path(arg.type))
                 self.write(arg.type)
                 if add_link:
-                    self.write('</a>')
+                    self.write("</a>")
             else:
-                self.write('#')
+                self.write("#")
 
             # "Closing" modifiers
             if arg.is_vector:
-                self.write('&gt;')
+                self.write("&gt;")
 
             if arg.generic_definition:
-                self.write('}')
+                self.write("}")
 
         # Now write the resulting type (result from a function/type)
-        self.write(' = ')
-        generic_name = next((arg.name for arg in tlobject.args
-                             if arg.generic_definition), None)
+        self.write(" = ")
+        generic_name = next(
+            (arg.name for arg in tlobject.args if arg.generic_definition), None
+        )
 
         if tlobject.result == generic_name:
             # Generic results cannot have any link
             self.write(tlobject.result)
         else:
-            if re.search('^vector<', tlobject.result, re.IGNORECASE):
+            if re.search("^vector<", tlobject.result, re.IGNORECASE):
                 # Notice that we don't simply make up the "Vector" part,
                 # because some requests (as of now, only FutureSalts),
                 # use a lower type name for it (see #81)
-                vector, inner = tlobject.result.split('<')
-                inner = inner.strip('>')
-                self.write('<a href="{}">{}</a>&lt;',
-                           self.type_to_path(vector), vector)
+                vector, inner = tlobject.result.split("<")
+                inner = inner.strip(">")
+                self.write('<a href="{}">{}</a>&lt;', self.type_to_path(vector), vector)
 
-                self.write('<a href="{}">{}</a>&gt;',
-                           self.type_to_path(inner), inner)
+                self.write('<a href="{}">{}</a>&gt;', self.type_to_path(inner), inner)
             else:
-                self.write('<a href="{}">{}</a>',
-                           self.type_to_path(tlobject.result), tlobject.result)
+                self.write(
+                    '<a href="{}">{}</a>',
+                    self.type_to_path(tlobject.result),
+                    tlobject.result,
+                )
 
-        self.write('</pre>')
+        self.write("</pre>")
 
     def begin_table(self, column_count):
         """Begins a table with the given 'column_count', required to automatically
-           create the right amount of columns when adding items to the rows"""
+        create the right amount of columns when adding items to the rows"""
         self.table_columns = column_count
         self.table_columns_left = 0
-        self.write('<table>')
+        self.write("<table>")
 
     def add_row(self, text, link=None, bold=False, align=None):
         """This will create a new row, or add text to the next column
-           of the previously created, incomplete row, closing it if complete"""
+        of the previously created, incomplete row, closing it if complete"""
         if not self.table_columns_left:
             # Starting a new row
-            self.write('<tr>')
+            self.write("<tr>")
             self.table_columns_left = self.table_columns
 
-        self.write('<td')
+        self.write("<td")
         if align:
             self.write(' style="text-align:{}"', align)
-        self.write('>')
+        self.write(">")
 
         if bold:
-            self.write('<b>')
+            self.write("<b>")
         if link:
             self.write('<a href="{}">', self._rel(link))
 
@@ -224,57 +221,57 @@ class DocsWriter:
         self.write(text)
 
         if link:
-            self.write('</a>')
+            self.write("</a>")
         if bold:
-            self.write('</b>')
+            self.write("</b>")
 
-        self.write('</td>')
+        self.write("</td>")
 
         self.table_columns_left -= 1
         if not self.table_columns_left:
-            self.write('</tr>')
+            self.write("</tr>")
 
     def end_table(self):
         # If there was any column left, finish it before closing the table
         if self.table_columns_left:
-            self.write('</tr>')
+            self.write("</tr>")
 
-        self.write('</table>')
+        self.write("</table>")
 
     def write_text(self, text):
         """Writes a paragraph of text"""
-        self.write('<p>{}</p>', text)
+        self.write("<p>{}</p>", text)
 
     def write_copy_button(self, text, text_to_copy):
         """Writes a button with 'text' which can be used
-           to copy 'text_to_copy' to clipboard when it's clicked."""
+        to copy 'text_to_copy' to clipboard when it's clicked."""
         self.write_copy_script = True
-        self.write('<button onclick="cp(\'{}\');">{}</button>'
-                   .format(text_to_copy, text))
+        self.write(
+            "<button onclick=\"cp('{}');\">{}</button>".format(text_to_copy, text)
+        )
 
-    def add_script(self, src='', path=None):
+    def add_script(self, src="", path=None):
         if path:
-            self._script += '<script src="{}"></script>'.format(
-                self._rel(path))
+            self._script += '<script src="{}"></script>'.format(self._rel(path))
         elif src:
-            self._script += '<script>{}</script>'.format(src)
+            self._script += "<script>{}</script>".format(src)
 
     def end_body(self):
         """Ends the whole document. This should be called the last"""
         if self.write_copy_script:
             self.write(
                 '<textarea id="c" class="invisible"></textarea>'
-                '<script>'
-                'function cp(t){'
+                "<script>"
+                "function cp(t){"
                 'var c=document.getElementById("c");'
-                'c.value=t;'
-                'c.select();'
+                "c.value=t;"
+                "c.select();"
                 'try{document.execCommand("copy")}'
-                'catch(e){}}'
-                '</script>'
+                "catch(e){}}"
+                "</script>"
             )
 
-        self.write('</div>{}</body></html>', self._script)
+        self.write("</div>{}</body></html>", self._script)
 
     # "Low" level writing
     def write(self, s, *args, **kwargs):
@@ -288,7 +285,7 @@ class DocsWriter:
     def __enter__(self):
         # Sanity check
         self.filename.parent.mkdir(parents=True, exist_ok=True)
-        self.handle = self.filename.open('w', encoding='utf-8')
+        self.handle = self.filename.open("w", encoding="utf-8")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

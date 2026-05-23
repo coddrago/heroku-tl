@@ -12,13 +12,13 @@ class SourceBuilder:
 
     def indent(self):
         """Indents the current source code line
-           by the current indentation level
+        by the current indentation level
         """
-        self.write(' ' * (self.current_indent * self.indent_size))
+        self.write(" " * (self.current_indent * self.indent_size))
 
     def write(self, string, *args, **kwargs):
         """Writes a string into the source code,
-           applying indentation if required
+        applying indentation if required
         """
         if self.on_new_line:
             self.on_new_line = False  # We're not on a new line anymore
@@ -31,15 +31,15 @@ class SourceBuilder:
         else:
             self.out_stream.write(string)
 
-    def writeln(self, string='', *args, **kwargs):
+    def writeln(self, string="", *args, **kwargs):
         """Writes a string into the source code _and_ appends a new line,
-           applying indentation if required
+        applying indentation if required
         """
-        self.write(string + '\n', *args, **kwargs)
+        self.write(string + "\n", *args, **kwargs)
         self.on_new_line = True
 
         # If we're writing a block, increment indent for the next time
-        if string and string[-1] == ':':
+        if string and string[-1] == ":":
             self.current_indent += 1
 
         # Clear state after the user adds a new line

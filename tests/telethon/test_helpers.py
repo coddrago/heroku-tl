@@ -13,8 +13,8 @@ from telethon.tl.types import MessageEntityUnknown as Meu
 
 
 def test_strip_text():
-    text = ' text '
-    text_stripped = 'text'
+    text = " text "
+    text_stripped = "text"
     entities_before_and_after = (
         ([], []),
         ([Meu(i, 0) for i in range(10)], []),  # del ''
@@ -26,11 +26,14 @@ def test_strip_text():
         ([Meu(0, 6)], [Meu(0, 4)]),  # ' text ' -> 'text'
     )
     for entities_before, entities_expected in entities_before_and_after:
-        entities_for_test = [Meu(meu.offset, meu.length) for meu in entities_before]  # deep copy
+        entities_for_test = [
+            Meu(meu.offset, meu.length) for meu in entities_before
+        ]  # deep copy
         text_after = helpers.strip_text(text, entities_for_test)
         assert text_after == text_stripped
-        assert sorted((e.offset, e.length) for e in entities_for_test) \
-               == sorted((e.offset, e.length) for e in entities_expected)
+        assert sorted((e.offset, e.length) for e in entities_for_test) == sorted(
+            (e.offset, e.length) for e in entities_expected
+        )
         inner_text_before = get_inner_text(text, entities_before)
         inner_text_before_stripped = [t.strip() for t in inner_text_before]
         inner_text_after = get_inner_text(text_after, entities_for_test)
@@ -78,6 +81,6 @@ class TestSyncifyAsyncContext:
 def test_generate_key_data_from_nonce():
     gkdfn = helpers.generate_key_data_from_nonce
 
-    key_expect = b64decode(b'NFwRFB8Knw/kAmvPWjtrQauWysHClVfQh0UOAaABqZA=')
-    nonce_expect = b64decode(b'1AgjhU9eDvJRjFik73bjR2zZEATzL/jLu9yodYfWEgA=')
+    key_expect = b64decode(b"NFwRFB8Knw/kAmvPWjtrQauWysHClVfQh0UOAaABqZA=")
+    nonce_expect = b64decode(b"1AgjhU9eDvJRjFik73bjR2zZEATzL/jLu9yodYfWEgA=")
     assert gkdfn(123456789, 1234567) == (key_expect, nonce_expect)

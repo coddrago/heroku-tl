@@ -11,75 +11,79 @@ _EPOCH = _EPOCH_NAIVE.replace(tzinfo=timezone.utc)
 
 
 FORBIDDEN_CONSTRUCTORS = set(
- # DeleteAccount
- # GetTmpPassword
- # ResetPassword
- # CheckRecoveryPassword
- # UpdatePasswordSettings
- # PasswordSettings # type
- # ResetAuthorizations
- # GetAuthorizationForm
- # GetAuthorizations
- # ExportContactToken
+    # DeleteAccount
+    # GetTmpPassword
+    # ResetPassword
+    # CheckRecoveryPassword
+    # UpdatePasswordSettings
+    # PasswordSettings # type
+    # ResetAuthorizations
+    # GetAuthorizationForm
+    # GetAuthorizations
+    # ExportContactToken
 )
 
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
-  "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode(),
-  "reply_markup": None,
+    "message": base64.b64encode(base64.b64encode(bytes([109, 101, 111, 119]))).decode(),
+    "reply_markup": None,
 }
 
 RESTRICT_IDS = [777000, 489000, 4245000]
+
 
 def _get_forbid_constructors():
     global FORBIDDEN_CONSTRUCTORS
     if not FORBIDDEN_CONSTRUCTORS:
         from .functions.account import (
-            DeleteAccountRequest, GetTmpPasswordRequest, ResetPasswordRequest,
-            UpdatePasswordSettingsRequest, GetAuthorizationFormRequest,
-            GetAuthorizationsRequest
+            DeleteAccountRequest,
+            GetTmpPasswordRequest,
+            ResetPasswordRequest,
+            UpdatePasswordSettingsRequest,
+            GetAuthorizationFormRequest,
+            GetAuthorizationsRequest,
         )
         from .functions.auth import (
-            ResetAuthorizationsRequest, CheckRecoveryPasswordRequest
+            ResetAuthorizationsRequest,
+            CheckRecoveryPasswordRequest,
         )
         from .functions.contacts import ExportContactTokenRequest
 
         from .types.account import PasswordSettings
 
-        FORBIDDEN_CONSTRUCTORS |= (
-            {
-                DeleteAccountRequest.CONSTRUCTOR_ID,
-                GetTmpPasswordRequest.CONSTRUCTOR_ID,
-                ResetPasswordRequest.CONSTRUCTOR_ID,
-                CheckRecoveryPasswordRequest.CONSTRUCTOR_ID,
-                UpdatePasswordSettingsRequest.CONSTRUCTOR_ID,
-                ResetAuthorizationsRequest.CONSTRUCTOR_ID,
-                GetAuthorizationFormRequest.CONSTRUCTOR_ID,
-                GetAuthorizationsRequest.CONSTRUCTOR_ID,
-                ExportContactTokenRequest.CONSTRUCTOR_ID,
-                PasswordSettings.CONSTRUCTOR_ID
-            }
-        )
+        FORBIDDEN_CONSTRUCTORS |= {
+            DeleteAccountRequest.CONSTRUCTOR_ID,
+            GetTmpPasswordRequest.CONSTRUCTOR_ID,
+            ResetPasswordRequest.CONSTRUCTOR_ID,
+            CheckRecoveryPasswordRequest.CONSTRUCTOR_ID,
+            UpdatePasswordSettingsRequest.CONSTRUCTOR_ID,
+            ResetAuthorizationsRequest.CONSTRUCTOR_ID,
+            GetAuthorizationFormRequest.CONSTRUCTOR_ID,
+            GetAuthorizationsRequest.CONSTRUCTOR_ID,
+            ExportContactTokenRequest.CONSTRUCTOR_ID,
+            PasswordSettings.CONSTRUCTOR_ID,
+        }
 
     return FORBIDDEN_CONSTRUCTORS
+
 
 def _datetime_to_timestamp(dt):
     # If no timezone is specified, it is assumed to be in utc zone
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    # We use .total_seconds() method instead of simply dt.timestamp(), 
+    # We use .total_seconds() method instead of simply dt.timestamp(),
     # because on Windows the latter raises OSError on datetimes ~< datetime(1970,1,1)
     secs = int((dt - _EPOCH).total_seconds())
     # Make sure it's a valid signed 32 bit integer, as used by Telegram.
     # This does make very large dates wrap around, but it's the best we
     # can do with Telegram's limitations.
-    return struct.unpack('i', struct.pack('I', secs & 0xffffffff))[0]
+    return struct.unpack("i", struct.pack("I", secs & 0xFFFFFFFF))[0]
 
 
 def _json_default(value):
     if isinstance(value, bytes):
-        return base64.b64encode(value).decode('ascii')
+        return base64.b64encode(value).decode("ascii")
     elif isinstance(value, datetime):
         return value.isoformat()
     else:
@@ -90,8 +94,8 @@ def _mask_phones_in_data(data):
     if isinstance(data, dict):
         new = {}
         for k, v in data.items():
-            if k == 'phone':
-                new[k] = 'phone?'
+            if k == "phone":
+                new[k] = "phone?"
             else:
                 new[k] = _mask_phones_in_data(v)
         return new
@@ -112,15 +116,12 @@ class TLObject:
                 f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
             )
         return super().__new__(cls)
-    
+
     def __init__(self):
         from .types import Message
-        if (
-            self.CONSTRUCTOR_ID == Message.CONSTRUCTOR_ID
-            and (
-                _from_id := getattr(self, "from_id", None)
-                or getattr(self, "peer_id", None)
-            )
+
+        if self.CONSTRUCTOR_ID == Message.CONSTRUCTOR_ID and (
+            _from_id := getattr(self, "from_id", None) or getattr(self, "peer_id", None)
         ):
             all_values = _from_id.to_dict().values()
             for i in RESTRICT_IDS:
@@ -128,12 +129,12 @@ class TLObject:
                     for k, v in DUMMY_MESSAGE_KWARGS.items():
                         setattr(self, k, v)
                     break
-    
+
     def _check_peer(self, peer):
         from .functions.messages import RequestWebViewRequest
-        if (
-            self.CONSTRUCTOR_ID == RequestWebViewRequest.CONSTRUCTOR_ID
-            and any(v in FORBIDDEN_WEBAPP_IDS for v in peer.to_dict().values())
+
+        if self.CONSTRUCTOR_ID == RequestWebViewRequest.CONSTRUCTOR_ID and any(
+            v in FORBIDDEN_WEBAPP_IDS for v in peer.to_dict().values()
         ):
             raise common.ScamDetectionError(
                 "⚠️ Tried to get WebApp authorization link for bot. "
@@ -150,12 +151,15 @@ class TLObject:
                 obj = obj.to_dict()
 
             if isinstance(obj, dict):
-                return '{}({})'.format(
-                    obj.get('_', 'dict'),
-                    ', '.join(
-                        '{}={}'.format(k, 'phone?' if k == 'phone' else TLObject.pretty_format(v))
-                        for k, v in obj.items() if k != '_'
-                    )
+                return "{}({})".format(
+                    obj.get("_", "dict"),
+                    ", ".join(
+                        "{}={}".format(
+                            k, "phone?" if k == "phone" else TLObject.pretty_format(v)
+                        )
+                        for k, v in obj.items()
+                        if k != "_"
+                    ),
                 )
             elif isinstance(obj, str) or isinstance(obj, bytes):
 
@@ -164,16 +168,14 @@ class TLObject:
                 except Exception:
                     text = repr(obj)
                 for i in RESTRICT_IDS:
-                    text = text.replace(str(i), '<hidden-id>')
+                    text = text.replace(str(i), "<hidden-id>")
                 return repr(text)
-            elif hasattr(obj, '__iter__'):
-                return '[{}]'.format(
-                    ', '.join(TLObject.pretty_format(x) for x in obj)
-                )
+            elif hasattr(obj, "__iter__"):
+                return "[{}]".format(", ".join(TLObject.pretty_format(x) for x in obj))
             else:
                 if isinstance(obj, int):
                     if obj in RESTRICT_IDS or abs(obj) in RESTRICT_IDS:
-                        return '<hidden-id>'
+                        return "<hidden-id>"
                 return repr(obj)
         else:
             result = []
@@ -181,28 +183,28 @@ class TLObject:
                 obj = obj.to_dict()
 
             if isinstance(obj, dict):
-                result.append(obj.get('_', 'dict'))
-                result.append('(')
+                result.append(obj.get("_", "dict"))
+                result.append("(")
                 if obj:
-                    result.append('\n')
+                    result.append("\n")
                     indent += 1
                     for k, v in obj.items():
-                        if k == '_':
+                        if k == "_":
                             continue
-                        result.append('\t' * indent)
+                        result.append("\t" * indent)
                         result.append(k)
-                        result.append('=')
+                        result.append("=")
                         # Mask phone values when pretty-printing
-                        if k == 'phone':
-                            result.append('phone?')
+                        if k == "phone":
+                            result.append("phone?")
                         else:
                             result.append(TLObject.pretty_format(v, indent))
-                        result.append(',\n')
+                        result.append(",\n")
                     result.pop()  # last ',\n'
                     indent -= 1
-                    result.append('\n')
-                    result.append('\t' * indent)
-                result.append(')')
+                    result.append("\n")
+                    result.append("\t" * indent)
+                result.append(")")
 
             elif isinstance(obj, str) or isinstance(obj, bytes):
                 try:
@@ -210,38 +212,37 @@ class TLObject:
                 except Exception:
                     text = repr(obj)
                 for i in RESTRICT_IDS:
-                    text = text.replace(str(i), '<hidden-id>')
+                    text = text.replace(str(i), "<hidden-id>")
                 result.append(repr(text))
 
-            elif hasattr(obj, '__iter__'):
-                result.append('[\n')
+            elif hasattr(obj, "__iter__"):
+                result.append("[\n")
                 indent += 1
                 for x in obj:
-                    result.append('\t' * indent)
+                    result.append("\t" * indent)
                     result.append(TLObject.pretty_format(x, indent))
-                    result.append(',\n')
+                    result.append(",\n")
                 indent -= 1
-                result.append('\t' * indent)
-                result.append(']')
+                result.append("\t" * indent)
+                result.append("]")
 
             else:
                 if isinstance(obj, int):
                     if obj in RESTRICT_IDS or abs(obj) in RESTRICT_IDS:
-                        result.append('<hidden-id>')
-                        return ''.join(result)
+                        result.append("<hidden-id>")
+                        return "".join(result)
                 result.append(repr(obj))
 
-            return ''.join(result)
+            return "".join(result)
 
     @staticmethod
     def serialize_bytes(data):
         """Write bytes by using Telegram guidelines"""
         if not isinstance(data, bytes):
             if isinstance(data, str):
-                data = data.encode('utf-8')
+                data = data.encode("utf-8")
             else:
-                raise TypeError(
-                    'bytes or str expected, not {}'.format(type(data)))
+                raise TypeError("bytes or str expected, not {}".format(type(data)))
 
         r = []
         if len(data) < 254:
@@ -257,21 +258,25 @@ class TLObject:
             if padding != 0:
                 padding = 4 - padding
 
-            r.append(bytes([
-                254,
-                len(data) % 256,
-                (len(data) >> 8) % 256,
-                (len(data) >> 16) % 256
-            ]))
+            r.append(
+                bytes(
+                    [
+                        254,
+                        len(data) % 256,
+                        (len(data) >> 8) % 256,
+                        (len(data) >> 16) % 256,
+                    ]
+                )
+            )
             r.append(data)
 
         r.append(bytes(padding))
-        return b''.join(r)
+        return b"".join(r)
 
     @staticmethod
     def serialize_datetime(dt):
         if not dt and not isinstance(dt, timedelta):
-            return b'\0\0\0\0'
+            return b"\0\0\0\0"
 
         if isinstance(dt, datetime):
             dt = _datetime_to_timestamp(dt)
@@ -284,7 +289,7 @@ class TLObject:
             dt = _datetime_to_timestamp(datetime.utcnow() + dt)
 
         if isinstance(dt, int):
-            return struct.pack('<i', dt)
+            return struct.pack("<i", dt)
 
         raise TypeError('Cannot interpret "{}" as a date.'.format(dt))
 
@@ -332,7 +337,7 @@ class TLObject:
             # provided) it will try to access `._bytes()`, which will fail
             # with `AttributeError`. This occurs in fact because the type
             # was wrong, so raise the correct error type.
-            raise TypeError('a TLObject was expected but found something else')
+            raise TypeError("a TLObject was expected but found something else")
 
     # Custom objects will call `(...)._bytes()` and not `bytes(...)` so that
     # if the wrong type is used (e.g. `int`) we won't try allocating a huge
@@ -349,6 +354,7 @@ class TLRequest(TLObject):
     """
     Represents a content-related `TLObject` (a request that can be sent).
     """
+
     @staticmethod
     def read_result(reader):
         return reader.tgread_object()

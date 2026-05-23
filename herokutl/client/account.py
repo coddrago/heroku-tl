@@ -16,7 +16,8 @@ class _TakeoutClient:
     """
     Proxy object over the client.
     """
-    __PROXY_INTERFACE = ('__enter__', '__exit__', '__aenter__', '__aexit__')
+
+    __PROXY_INTERFACE = ("__enter__", "__exit__", "__aenter__", "__aexit__")
 
     def __init__(self, finalize, client, request):
         # We use the name mangling for attributes to make them inaccessible
@@ -41,8 +42,10 @@ class _TakeoutClient:
         if client.session.takeout_id is None:
             client.session.takeout_id = (await client(self.__request)).id
         elif self.__request is not None:
-            raise ValueError("Can't send a takeout request while another "
-                "takeout for the current session still not been finished yet.")
+            raise ValueError(
+                "Can't send a takeout request while another "
+                "takeout for the current session still not been finished yet."
+            )
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -50,8 +53,9 @@ class _TakeoutClient:
             self.__success = exc_type is None
 
         if self.__success is not None:
-            result = await self(functions.account.FinishTakeoutSessionRequest(
-                self.__success))
+            result = await self(
+                functions.account.FinishTakeoutSessionRequest(self.__success)
+            )
             if not result:
                 raise ValueError("Failed to finish the takeout.")
             self.session.takeout_id = None
@@ -62,11 +66,13 @@ class _TakeoutClient:
     async def __call__(self, request, ordered=False):
         takeout_id = self.__client.session.takeout_id
         if takeout_id is None:
-            raise ValueError('Takeout mode has not been initialized '
-                '(are you calling outside of "with"?)')
+            raise ValueError(
+                "Takeout mode has not been initialized "
+                '(are you calling outside of "with"?)'
+            )
 
         single = not utils.is_list_like(request)
-        requests = ((request,) if single else request)
+        requests = (request,) if single else request
         wrapped = []
         for r in requests:
             if not isinstance(r, TLRequest):
@@ -74,8 +80,7 @@ class _TakeoutClient:
             await r.resolve(self, utils)
             wrapped.append(functions.InvokeWithTakeoutRequest(takeout_id, r))
 
-        return await self.__client(
-            wrapped[0] if single else wrapped, ordered=ordered)
+        return await self.__client(wrapped[0] if single else wrapped, ordered=ordered)
 
     def __getattribute__(self, name):
         # We access class via type() because __class__ will recurse infinitely.
@@ -83,7 +88,7 @@ class _TakeoutClient:
         # they'll be passed to __getattribute__() as already decorated. For
         # example, 'self.__client' will be passed as '_TakeoutClient__client'.
         # https://docs.python.org/3/tutorial/classes.html#private-variables
-        if name.startswith('__') and name not in type(self).__PROXY_INTERFACE:
+        if name.startswith("__") and name not in type(self).__PROXY_INTERFACE:
             raise AttributeError  # force call of __getattr__
 
         # Try to access attribute in the proxy object and check for the same
@@ -95,13 +100,12 @@ class _TakeoutClient:
         if inspect.ismethod(value):
             # Emulate bound methods behavior by partially applying our proxy
             # class as the self parameter instead of the client.
-            return functools.partial(
-                getattr(self.__client.__class__, name), self)
+            return functools.partial(getattr(self.__client.__class__, name), self)
 
         return value
 
     def __setattr__(self, name, value):
-        if name.startswith('_{}__'.format(type(self).__name__.lstrip('_'))):
+        if name.startswith("_{}__".format(type(self).__name__.lstrip("_"))):
             # This is our own name-mangled attribute, keep calm.
             return super().__setattr__(name, value)
         return setattr(self.__client, name, value)
@@ -109,16 +113,17 @@ class _TakeoutClient:
 
 class AccountMethods:
     def takeout(
-            self: 'TelegramClient',
-            finalize: bool = True,
-            *,
-            contacts: bool = None,
-            users: bool = None,
-            chats: bool = None,
-            megagroups: bool = None,
-            channels: bool = None,
-            files: bool = None,
-            max_file_size: bool = None) -> 'TelegramClient':
+        self: "TelegramClient",
+        finalize: bool = True,
+        *,
+        contacts: bool = None,
+        users: bool = None,
+        chats: bool = None,
+        megagroups: bool = None,
+        channels: bool = None,
+        files: bool = None,
+        max_file_size: bool = None
+    ) -> "TelegramClient":
         """
         Returns a :ref:`telethon-client` which calls methods behind a takeout session.
 
@@ -207,19 +212,18 @@ class AccountMethods:
             message_megagroups=megagroups,
             message_channels=channels,
             files=files,
-            file_max_size=max_file_size
+            file_max_size=max_file_size,
         )
         arg_specified = (arg is not None for arg in request_kwargs.values())
 
         if self.session.takeout_id is None or any(arg_specified):
-            request = functions.account.InitTakeoutSessionRequest(
-                **request_kwargs)
+            request = functions.account.InitTakeoutSessionRequest(**request_kwargs)
         else:
             request = None
 
         return _TakeoutClient(finalize, self, request)
 
-    async def end_takeout(self: 'TelegramClient', success: bool) -> bool:
+    async def end_takeout(self: "TelegramClient", success: bool) -> bool:
         """
         Finishes the current takeout session.
 

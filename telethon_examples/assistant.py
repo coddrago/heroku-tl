@@ -11,6 +11,7 @@ look like the following:
     plugins/
         ...
 """
+
 import asyncio
 import os
 import sys
@@ -30,8 +31,11 @@ except ImportError:
         #         plugins/    (cloned)
         from . import plugins
     except ImportError:
-        print('could not load the plugins module, does the directory exist '
-              'in the correct location?', file=sys.stderr)
+        print(
+            "could not load the plugins module, does the directory exist "
+            "in the correct location?",
+            file=sys.stderr,
+        )
 
         exit(1)
 
@@ -48,10 +52,10 @@ def get_env(name, message, cast=str):
             time.sleep(1)
 
 
-API_ID = get_env('TG_API_ID', 'Enter your API ID: ', int)
-API_HASH = get_env('TG_API_HASH', 'Enter your API hash: ')
-TOKEN = get_env('TG_TOKEN', 'Enter the bot token: ')
-NAME = TOKEN.split(':')[0]
+API_ID = get_env("TG_API_ID", "Enter your API ID: ", int)
+API_HASH = get_env("TG_API_HASH", "Enter your API hash: ")
+TOKEN = get_env("TG_TOKEN", "Enter the bot token: ")
+NAME = TOKEN.split(":")[0]
 
 
 async def main():
@@ -66,5 +70,5 @@ async def main():
         await bot.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

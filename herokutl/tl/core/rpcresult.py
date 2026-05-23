@@ -4,7 +4,7 @@ from ..types import RpcError
 
 
 class RpcResult(TLObject):
-    CONSTRUCTOR_ID = 0xf35c6d01
+    CONSTRUCTOR_ID = 0xF35C6D01
 
     def __init__(self, req_msg_id, body, error):
         self.req_msg_id = req_msg_id
@@ -28,8 +28,8 @@ class RpcResult(TLObject):
 
     def to_dict(self):
         return {
-            '_': 'RpcResult',
-            'req_msg_id': self.req_msg_id,
-            'body': self.body,
-            'error': self.error
+            "_": "RpcResult",
+            "req_msg_id": self.req_msg_id,
+            "body": self.body,
+            "error": self.error,
         }

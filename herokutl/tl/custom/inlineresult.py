@@ -13,21 +13,22 @@ class InlineResult:
         result (:tl:`BotInlineResult`):
             The original :tl:`BotInlineResult` object.
     """
+
     # tdlib types are the following (InlineQueriesManager::answer_inline_query @ 1a4a834):
     # gif, article, audio, contact, file, geo, photo, sticker, venue, video, voice
     #
     # However, those documented in https://core.telegram.org/bots/api#inline-mode are different.
-    ARTICLE = 'article'
-    PHOTO = 'photo'
-    GIF = 'gif'
-    VIDEO = 'video'
-    VIDEO_GIF = 'mpeg4_gif'
-    AUDIO = 'audio'
-    DOCUMENT = 'document'
-    LOCATION = 'location'
-    VENUE = 'venue'
-    CONTACT = 'contact'
-    GAME = 'game'
+    ARTICLE = "article"
+    PHOTO = "photo"
+    GIF = "gif"
+    VIDEO = "video"
+    VIDEO_GIF = "mpeg4_gif"
+    AUDIO = "audio"
+    DOCUMENT = "document"
+    LOCATION = "location"
+    VENUE = "venue"
+    CONTACT = "contact"
+    GAME = "game"
 
     def __init__(self, client, original, query_id=None, *, entity=None):
         self._client = client
@@ -102,9 +103,16 @@ class InlineResult:
         elif isinstance(self.result, types.BotInlineMediaResult):
             return self.result.document
 
-    async def click(self, entity=None, reply_to=None, comment_to=None,
-                    silent=False, clear_draft=False, hide_via=False,
-                    background=None):
+    async def click(
+        self,
+        entity=None,
+        reply_to=None,
+        comment_to=None,
+        silent=False,
+        clear_draft=False,
+        hide_via=False,
+        background=None,
+    ):
         """
         Clicks this result and sends the associated `message`.
 
@@ -143,7 +151,9 @@ class InlineResult:
         elif self._entity:
             entity = self._entity
         else:
-            raise ValueError('You must provide the entity where the result should be sent to')
+            raise ValueError(
+                "You must provide the entity where the result should be sent to"
+            )
 
         if comment_to:
             entity, reply_id = await self._client._get_comment_data(entity, comment_to)
@@ -158,10 +168,9 @@ class InlineResult:
             background=background,
             clear_draft=clear_draft,
             hide_via=hide_via,
-            reply_to=None if reply_id is None else types.InputReplyToMessage(reply_id)
+            reply_to=None if reply_id is None else types.InputReplyToMessage(reply_id),
         )
-        return self._client._get_response_message(
-            req, await self._client(req), entity)
+        return self._client._get_response_message(req, await self._client(req), entity)
 
     async def download_media(self, *args, **kwargs):
         """
@@ -173,4 +182,5 @@ class InlineResult:
         """
         if self.document or self.photo:
             return await self._client.download_media(
-                self.document or self.photo, *args, **kwargs)
+                self.document or self.photo, *args, **kwargs
+            )

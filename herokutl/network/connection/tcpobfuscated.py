@@ -13,19 +13,21 @@ class ObfuscatedIO:
         self._reader = connection._reader
         self._writer = connection._writer
 
-        (self.header,
-         self._encrypt,
-         self._decrypt) = self.init_header(connection.packet_codec)
+        self.header, self._encrypt, self._decrypt = self.init_header(
+            connection.packet_codec
+        )
 
     @staticmethod
     def init_header(packet_codec):
         # Obfuscated messages secrets cannot start with any of these
-        keywords = (b'PVrG', b'GET ', b'POST', b'\xee\xee\xee\xee')
+        keywords = (b"PVrG", b"GET ", b"POST", b"\xee\xee\xee\xee")
         while True:
             random = os.urandom(64)
-            if (random[0] != 0xef and
-                    random[:4] not in keywords and
-                    random[4:8] != b'\0\0\0\0'):
+            if (
+                random[0] != 0xEF
+                and random[:4] not in keywords
+                and random[4:8] != b"\0\0\0\0"
+            ):
                 break
 
         random = bytearray(random)
@@ -58,5 +60,6 @@ class ConnectionTcpObfuscated(ObfuscatedConnection):
     a randomly generated key using the AES-CTR mode so the packets are
     harder to discern.
     """
+
     obfuscated_io = ObfuscatedIO
     packet_codec = AbridgedPacketCodec

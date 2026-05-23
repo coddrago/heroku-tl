@@ -23,6 +23,7 @@ class AdminLogEvent:
         input_user (:tl:`InputPeerUser`):
             Input variant of `user`.
     """
+
     def __init__(self, original, entities):
         self.original = original
         self.entities = entities
@@ -63,13 +64,16 @@ class AdminLogEvent:
         The old value from the event.
         """
         ori = self.original.action
-        if isinstance(ori, (
+        if isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionChangeAbout,
                 types.ChannelAdminLogEventActionChangeTitle,
                 types.ChannelAdminLogEventActionChangeUsername,
                 types.ChannelAdminLogEventActionChangeLocation,
                 types.ChannelAdminLogEventActionChangeHistoryTTL,
-        )):
+            ),
+        ):
             return ori.prev_value
         elif isinstance(ori, types.ChannelAdminLogEventActionChangePhoto):
             return ori.prev_photo
@@ -77,16 +81,22 @@ class AdminLogEvent:
             return ori.prev_stickerset
         elif isinstance(ori, types.ChannelAdminLogEventActionEditMessage):
             return ori.prev_message
-        elif isinstance(ori, (
+        elif isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionParticipantToggleAdmin,
-                types.ChannelAdminLogEventActionParticipantToggleBan
-        )):
+                types.ChannelAdminLogEventActionParticipantToggleBan,
+            ),
+        ):
             return ori.prev_participant
-        elif isinstance(ori, (
+        elif isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionToggleInvites,
                 types.ChannelAdminLogEventActionTogglePreHistoryHidden,
-                types.ChannelAdminLogEventActionToggleSignatures
-        )):
+                types.ChannelAdminLogEventActionToggleSignatures,
+            ),
+        ):
             return not ori.new_value
         elif isinstance(ori, types.ChannelAdminLogEventActionDeleteMessage):
             return ori.message
@@ -94,11 +104,14 @@ class AdminLogEvent:
             return ori.prev_banned_rights
         elif isinstance(ori, types.ChannelAdminLogEventActionDiscardGroupCall):
             return ori.call
-        elif isinstance(ori, (
-            types.ChannelAdminLogEventActionExportedInviteDelete,
-            types.ChannelAdminLogEventActionExportedInviteRevoke,
-            types.ChannelAdminLogEventActionParticipantJoinByInvite,
-        )):
+        elif isinstance(
+            ori,
+            (
+                types.ChannelAdminLogEventActionExportedInviteDelete,
+                types.ChannelAdminLogEventActionExportedInviteRevoke,
+                types.ChannelAdminLogEventActionParticipantJoinByInvite,
+            ),
+        ):
             return ori.invite
         elif isinstance(ori, types.ChannelAdminLogEventActionExportedInviteEdit):
             return ori.prev_invite
@@ -109,7 +122,9 @@ class AdminLogEvent:
         The new value present in the event.
         """
         ori = self.original.action
-        if isinstance(ori, (
+        if isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionChangeAbout,
                 types.ChannelAdminLogEventActionChangeTitle,
                 types.ChannelAdminLogEventActionChangeUsername,
@@ -118,7 +133,8 @@ class AdminLogEvent:
                 types.ChannelAdminLogEventActionToggleSignatures,
                 types.ChannelAdminLogEventActionChangeLocation,
                 types.ChannelAdminLogEventActionChangeHistoryTTL,
-        )):
+            ),
+        ):
             return ori.new_value
         elif isinstance(ori, types.ChannelAdminLogEventActionChangePhoto):
             return ori.new_photo
@@ -126,15 +142,21 @@ class AdminLogEvent:
             return ori.new_stickerset
         elif isinstance(ori, types.ChannelAdminLogEventActionEditMessage):
             return ori.new_message
-        elif isinstance(ori, (
+        elif isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionParticipantToggleAdmin,
-                types.ChannelAdminLogEventActionParticipantToggleBan
-        )):
+                types.ChannelAdminLogEventActionParticipantToggleBan,
+            ),
+        ):
             return ori.new_participant
-        elif isinstance(ori, (
-            types.ChannelAdminLogEventActionParticipantInvite,
-            types.ChannelAdminLogEventActionParticipantVolume,
-        )):
+        elif isinstance(
+            ori,
+            (
+                types.ChannelAdminLogEventActionParticipantInvite,
+                types.ChannelAdminLogEventActionParticipantVolume,
+            ),
+        ):
             return ori.participant
         elif isinstance(ori, types.ChannelAdminLogEventActionDefaultBannedRights):
             return ori.new_banned_rights
@@ -142,10 +164,13 @@ class AdminLogEvent:
             return ori.message
         elif isinstance(ori, types.ChannelAdminLogEventActionStartGroupCall):
             return ori.call
-        elif isinstance(ori, (
+        elif isinstance(
+            ori,
+            (
                 types.ChannelAdminLogEventActionParticipantMute,
                 types.ChannelAdminLogEventActionParticipantUnmute,
-        )):
+            ),
+        ):
             return ori.participant
         elif isinstance(ori, types.ChannelAdminLogEventActionToggleGroupCallSetting):
             return ori.join_muted
@@ -159,8 +184,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `str`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeAbout)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeAbout
+        )
 
     @property
     def changed_title(self):
@@ -169,8 +195,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `str`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeTitle)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeTitle
+        )
 
     @property
     def changed_username(self):
@@ -179,8 +206,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `str`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeUsername)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeUsername
+        )
 
     @property
     def changed_photo(self):
@@ -189,8 +217,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as :tl:`Photo`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangePhoto)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangePhoto
+        )
 
     @property
     def changed_sticker_set(self):
@@ -199,8 +228,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as :tl:`InputStickerSet`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeStickerSet)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeStickerSet
+        )
 
     @property
     def changed_message(self):
@@ -210,8 +240,9 @@ class AdminLogEvent:
         If `True`, `old` and `new` will be present as
         `Message <telethon.tl.custom.message.Message>`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionEditMessage)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionEditMessage
+        )
 
     @property
     def deleted_message(self):
@@ -221,8 +252,9 @@ class AdminLogEvent:
         If `True`, `old` will be present as
         `Message <telethon.tl.custom.message.Message>`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionDeleteMessage)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionDeleteMessage
+        )
 
     @property
     def changed_admin(self):
@@ -234,8 +266,8 @@ class AdminLogEvent:
         :tl:`ChannelParticipant`.
         """
         return isinstance(
-            self.original.action,
-            types.ChannelAdminLogEventActionParticipantToggleAdmin)
+            self.original.action, types.ChannelAdminLogEventActionParticipantToggleAdmin
+        )
 
     @property
     def changed_restrictions(self):
@@ -246,8 +278,8 @@ class AdminLogEvent:
         :tl:`ChannelParticipant`.
         """
         return isinstance(
-            self.original.action,
-            types.ChannelAdminLogEventActionParticipantToggleBan)
+            self.original.action, types.ChannelAdminLogEventActionParticipantToggleBan
+        )
 
     @property
     def changed_invites(self):
@@ -256,8 +288,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `bool`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionToggleInvites)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionToggleInvites
+        )
 
     @property
     def changed_location(self):
@@ -266,8 +299,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as :tl:`ChannelLocation`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeLocation)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeLocation
+        )
 
     @property
     def joined(self):
@@ -275,8 +309,9 @@ class AdminLogEvent:
         Whether `user` joined through the channel's
         public username or not.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantJoin)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantJoin
+        )
 
     @property
     def joined_invite(self):
@@ -287,16 +322,18 @@ class AdminLogEvent:
         If `True`, `new` will be present as
         :tl:`ChannelParticipant`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantInvite)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantInvite
+        )
 
     @property
     def left(self):
         """
         Whether `user` left the channel or not.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantLeave)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantLeave
+        )
 
     @property
     def changed_hide_history(self):
@@ -306,8 +343,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `bool`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionTogglePreHistoryHidden)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionTogglePreHistoryHidden
+        )
 
     @property
     def changed_signatures(self):
@@ -317,8 +355,9 @@ class AdminLogEvent:
 
         If `True`, `old` and `new` will be present as `bool`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionToggleSignatures)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionToggleSignatures
+        )
 
     @property
     def changed_pin(self):
@@ -328,8 +367,9 @@ class AdminLogEvent:
         If `True`, `new` will be present as
         `Message <telethon.tl.custom.message.Message>`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionUpdatePinned)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionUpdatePinned
+        )
 
     @property
     def changed_default_banned_rights(self):
@@ -339,8 +379,9 @@ class AdminLogEvent:
         If `True`, `old` and `new` will
         be present as :tl:`ChatBannedRights`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionDefaultBannedRights)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionDefaultBannedRights
+        )
 
     @property
     def stopped_poll(self):
@@ -350,8 +391,9 @@ class AdminLogEvent:
         If `True`, `new` will be present as
         `Message <telethon.tl.custom.message.Message>`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionStopPoll)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionStopPoll
+        )
 
     @property
     def started_group_call(self):
@@ -360,8 +402,9 @@ class AdminLogEvent:
 
         If `True`, `new` will be present as :tl:`InputGroupCall`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionStartGroupCall)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionStartGroupCall
+        )
 
     @property
     def discarded_group_call(self):
@@ -370,8 +413,9 @@ class AdminLogEvent:
 
         If `True`, `old` will be present as :tl:`InputGroupCall`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionDiscardGroupCall)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionDiscardGroupCall
+        )
 
     @property
     def user_muted(self):
@@ -380,8 +424,9 @@ class AdminLogEvent:
 
         If `True`, `new` will be present as :tl:`GroupCallParticipant`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantMute)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantMute
+        )
 
     @property
     def user_unmutted(self):
@@ -390,8 +435,9 @@ class AdminLogEvent:
 
         If `True`, `new` will be present as :tl:`GroupCallParticipant`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantUnmute)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantUnmute
+        )
 
     @property
     def changed_call_settings(self):
@@ -400,8 +446,9 @@ class AdminLogEvent:
 
         If `True`, `new` will be `True` if new users are muted on join.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionToggleGroupCallSetting)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionToggleGroupCallSetting
+        )
 
     @property
     def changed_history_ttl(self):
@@ -413,8 +460,9 @@ class AdminLogEvent:
 
         If `True`, `old` will be the old TTL, and `new` the new TTL, in seconds.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionChangeHistoryTTL)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionChangeHistoryTTL
+        )
 
     @property
     def deleted_exported_invite(self):
@@ -423,8 +471,9 @@ class AdminLogEvent:
 
         If `True`, `old` will be the deleted :tl:`ExportedChatInvite`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionExportedInviteDelete)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionExportedInviteDelete
+        )
 
     @property
     def edited_exported_invite(self):
@@ -434,8 +483,9 @@ class AdminLogEvent:
         If `True`, `old` and `new` will be the old and new
         :tl:`ExportedChatInvite`, respectively.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionExportedInviteEdit)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionExportedInviteEdit
+        )
 
     @property
     def revoked_exported_invite(self):
@@ -444,8 +494,9 @@ class AdminLogEvent:
 
         If `True`, `old` will be the revoked :tl:`ExportedChatInvite`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionExportedInviteRevoke)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionExportedInviteRevoke
+        )
 
     @property
     def joined_by_invite(self):
@@ -455,8 +506,10 @@ class AdminLogEvent:
         If `True`, `old` will be pre-existing (old) :tl:`ExportedChatInvite`
         used to join.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantJoinByInvite)
+        return isinstance(
+            self.original.action,
+            types.ChannelAdminLogEventActionParticipantJoinByInvite,
+        )
 
     @property
     def changed_user_volume(self):
@@ -465,8 +518,9 @@ class AdminLogEvent:
 
         If `True`, `new` will be the updated :tl:`GroupCallParticipant`.
         """
-        return isinstance(self.original.action,
-                          types.ChannelAdminLogEventActionParticipantVolume)
+        return isinstance(
+            self.original.action, types.ChannelAdminLogEventActionParticipantVolume
+        )
 
     def __str__(self):
         return str(self.original)

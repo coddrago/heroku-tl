@@ -13,10 +13,12 @@ class QRLogin:
     Most of the time, you will present the `url` as a QR code to the user,
     and while it's being shown, call `wait`.
     """
+
     def __init__(self, client, ignored_ids):
         self._client = client
         self._request = functions.auth.ExportLoginTokenRequest(
-            self._client.api_id, self._client.api_hash, ignored_ids)
+            self._client.api_id, self._client.api_hash, ignored_ids
+        )
         self._resp = None
 
     async def recreate(self):
@@ -54,7 +56,9 @@ class QRLogin:
 
         The URL simply consists of `token` base64-encoded.
         """
-        return 'tg://login?token={}'.format(base64.urlsafe_b64encode(self._resp.token).decode('utf-8').rstrip('='))
+        return "tg://login?token={}".format(
+            base64.urlsafe_b64encode(self._resp.token).decode("utf-8").rstrip("=")
+        )
 
     @property
     def expires(self) -> datetime.datetime:
@@ -88,7 +92,9 @@ class QRLogin:
             On success, an instance of :tl:`User`. On failure it will raise.
         """
         if timeout is None:
-            timeout = (self._resp.expires - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds()
+            timeout = (
+                self._resp.expires - datetime.datetime.now(tz=datetime.timezone.utc)
+            ).total_seconds()
 
         event = asyncio.Event()
 
@@ -108,7 +114,9 @@ class QRLogin:
         resp = await self._client(self._request)
         if isinstance(resp, types.auth.LoginTokenMigrateTo):
             await self._client._switch_dc(resp.dc_id)
-            resp = await self._client(functions.auth.ImportLoginTokenRequest(resp.token))
+            resp = await self._client(
+                functions.auth.ImportLoginTokenRequest(resp.token)
+            )
             # resp should now be auth.loginTokenSuccess
 
         if isinstance(resp, types.auth.LoginTokenSuccess):
@@ -116,4 +124,4 @@ class QRLogin:
             await self._client._on_login(user)
             return user
 
-        raise TypeError('Login token response was unexpected: {}'.format(resp))
+        raise TypeError("Login token response was unexpected: {}".format(resp))

@@ -4,9 +4,14 @@ from .abstract import Session
 from .. import utils
 from ..tl import TLObject
 from ..tl.types import (
-    PeerUser, PeerChat, PeerChannel,
-    InputPeerUser, InputPeerChat, InputPeerChannel,
-    InputPhoto, InputDocument
+    PeerUser,
+    PeerChat,
+    PeerChannel,
+    InputPeerUser,
+    InputPeerChat,
+    InputPeerChannel,
+    InputPhoto,
+    InputDocument,
 )
 
 
@@ -21,7 +26,7 @@ class _SentFileType(Enum):
         elif cls == InputPhoto:
             return _SentFileType.PHOTO
         else:
-            raise ValueError('The cls must be either InputDocument/InputPhoto')
+            raise ValueError("The cls must be either InputDocument/InputPhoto")
 
 
 class MemorySession(Session):
@@ -125,14 +130,12 @@ class MemorySession(Session):
         else:
             return
 
-        username = getattr(e, 'username', None) or None
+        username = getattr(e, "username", None) or None
         if username is not None:
             username = username.lower()
-        phone = getattr(e, 'phone', None)
+        phone = getattr(e, "phone", None)
         name = utils.get_display_name(e) or None
-        return self._entity_values_to_row(
-            marked_id, p_hash, username, phone, name
-        )
+        return self._entity_values_to_row(marked_id, p_hash, username, phone, name)
 
     def _entities_to_rows(self, tlo):
         if not isinstance(tlo, TLObject) and utils.is_list_like(tlo):
@@ -140,13 +143,13 @@ class MemorySession(Session):
             entities = tlo
         else:
             entities = []
-            if hasattr(tlo, 'user'):
+            if hasattr(tlo, "user"):
                 entities.append(tlo.user)
-            if hasattr(tlo, 'chat'):
+            if hasattr(tlo, "chat"):
                 entities.append(tlo.chat)
-            if hasattr(tlo, 'chats') and utils.is_list_like(tlo.chats):
+            if hasattr(tlo, "chats") and utils.is_list_like(tlo.chats):
                 entities.extend(tlo.chats)
-            if hasattr(tlo, 'users') and utils.is_list_like(tlo.users):
+            if hasattr(tlo, "users") and utils.is_list_like(tlo.users):
                 entities.extend(tlo.users)
 
         rows = []  # Rows to add (id, hash, username, phone, name)
@@ -161,44 +164,59 @@ class MemorySession(Session):
 
     def get_entity_rows_by_phone(self, phone):
         try:
-            return next((id, hash) for id, hash, _, found_phone, _
-                        in self._entities if found_phone == phone)
+            return next(
+                (id, hash)
+                for id, hash, _, found_phone, _ in self._entities
+                if found_phone == phone
+            )
         except StopIteration:
             pass
 
     def get_entity_rows_by_username(self, username):
         try:
-            return next((id, hash) for id, hash, found_username, _, _
-                        in self._entities if found_username == username)
+            return next(
+                (id, hash)
+                for id, hash, found_username, _, _ in self._entities
+                if found_username == username
+            )
         except StopIteration:
             pass
 
     def get_entity_rows_by_name(self, name):
         try:
-            return next((id, hash) for id, hash, _, _, found_name
-                        in self._entities if found_name == name)
+            return next(
+                (id, hash)
+                for id, hash, _, _, found_name in self._entities
+                if found_name == name
+            )
         except StopIteration:
             pass
 
     def get_entity_rows_by_id(self, id, exact=True):
         try:
             if exact:
-                return next((found_id, hash) for found_id, hash, _, _, _
-                            in self._entities if found_id == id)
+                return next(
+                    (found_id, hash)
+                    for found_id, hash, _, _, _ in self._entities
+                    if found_id == id
+                )
             else:
                 ids = (
                     utils.get_peer_id(PeerUser(id)),
                     utils.get_peer_id(PeerChat(id)),
-                    utils.get_peer_id(PeerChannel(id))
+                    utils.get_peer_id(PeerChannel(id)),
                 )
-                return next((found_id, hash) for found_id, hash, _, _, _
-                            in self._entities if found_id in ids)
+                return next(
+                    (found_id, hash)
+                    for found_id, hash, _, _, _ in self._entities
+                    if found_id in ids
+                )
         except StopIteration:
             pass
 
     def get_input_entity(self, key):
         try:
-            if key.SUBCLASS_OF_ID in (0xc91c90b6, 0xe669bf46, 0x40f202fd):
+            if key.SUBCLASS_OF_ID in (0xC91C90B6, 0xE669BF46, 0x40F202FD):
                 # hex(crc32(b'InputPeer', b'InputUser' and b'InputChannel'))
                 # We already have an Input version, so nothing else required
                 return key
@@ -243,11 +261,11 @@ class MemorySession(Session):
             elif kind == PeerChannel:
                 return InputPeerChannel(entity_id, entity_hash)
         else:
-            raise ValueError('Could not find input entity with key ', key)
+            raise ValueError("Could not find input entity with key ", key)
 
     def cache_file(self, md5_digest, file_size, instance):
         if not isinstance(instance, (InputDocument, InputPhoto)):
-            raise TypeError('Cannot cache %s instance' % type(instance))
+            raise TypeError("Cannot cache %s instance" % type(instance))
         key = (md5_digest, file_size, _SentFileType.from_type(type(instance)))
         value = (instance.id, instance.access_hash)
         self._files[key] = value

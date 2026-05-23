@@ -6,7 +6,6 @@ from .. import utils
 from ..tl import types
 from ..tl.custom.sendergetter import SenderGetter
 
-
 # TODO Either the properties are poorly named or they should be
 #      different events, but that would be a breaking change.
 #
@@ -15,6 +14,7 @@ from ..tl.custom.sendergetter import SenderGetter
 #      the user needs to check for the existence of `None`).
 #
 # TODO Handle UpdateUserBlocked, UpdateUserName, UpdateUserPhone, UpdateUser
+
 
 def _requires_action(function):
     @functools.wraps(function)
@@ -48,22 +48,25 @@ class UserUpdate(EventBuilder):
                 if event.uploading:
                     await client.send_message(event.user_id, 'What are you sending?')
     """
+
     @classmethod
     def build(cls, update, others=None, self_id=None):
         if isinstance(update, types.UpdateUserStatus):
-            return cls.Event(types.PeerUser(update.user_id),
-                             status=update.status)
+            return cls.Event(types.PeerUser(update.user_id), status=update.status)
         elif isinstance(update, types.UpdateChannelUserTyping):
-            return cls.Event(update.from_id,
-                             chat_peer=types.PeerChannel(update.channel_id),
-                             typing=update.action)
+            return cls.Event(
+                update.from_id,
+                chat_peer=types.PeerChannel(update.channel_id),
+                typing=update.action,
+            )
         elif isinstance(update, types.UpdateChatUserTyping):
-            return cls.Event(update.from_id,
-                             chat_peer=types.PeerChat(update.chat_id),
-                             typing=update.action)
+            return cls.Event(
+                update.from_id,
+                chat_peer=types.PeerChat(update.chat_id),
+                typing=update.action,
+            )
         elif isinstance(update, types.UpdateUserTyping):
-            return cls.Event(update.user_id,
-                             typing=update.action)
+            return cls.Event(update.user_id, typing=update.action)
 
     class Event(EventCommon, SenderGetter):
         """
@@ -85,6 +88,7 @@ class UserUpdate(EventBuilder):
                 of the typing properties, since they will all be `None`
                 if the action is not set.
         """
+
         def __init__(self, peer, *, status=None, chat_peer=None, typing=None):
             super().__init__(chat_peer or peer)
             SenderGetter.__init__(self, utils.get_peer_id(peer))
@@ -95,7 +99,8 @@ class UserUpdate(EventBuilder):
         def _set_client(self, client):
             super()._set_client(client)
             self._sender, self._input_sender = utils._get_entity_pair(
-                self.sender_id, self._entities, client._mb_entity_cache)
+                self.sender_id, self._entities, client._mb_entity_cache
+            )
 
         @property
         def user(self):
@@ -134,15 +139,18 @@ class UserUpdate(EventBuilder):
             """
             `True` if the action is uploading something.
             """
-            return isinstance(self.action, (
-                types.SendMessageChooseContactAction,
-                types.SendMessageChooseStickerAction,
-                types.SendMessageUploadAudioAction,
-                types.SendMessageUploadDocumentAction,
-                types.SendMessageUploadPhotoAction,
-                types.SendMessageUploadRoundAction,
-                types.SendMessageUploadVideoAction
-            ))
+            return isinstance(
+                self.action,
+                (
+                    types.SendMessageChooseContactAction,
+                    types.SendMessageChooseStickerAction,
+                    types.SendMessageUploadAudioAction,
+                    types.SendMessageUploadDocumentAction,
+                    types.SendMessageUploadPhotoAction,
+                    types.SendMessageUploadRoundAction,
+                    types.SendMessageUploadVideoAction,
+                ),
+            )
 
         @property
         @_requires_action
@@ -150,11 +158,14 @@ class UserUpdate(EventBuilder):
             """
             `True` if the action is recording something.
             """
-            return isinstance(self.action, (
-                types.SendMessageRecordAudioAction,
-                types.SendMessageRecordRoundAction,
-                types.SendMessageRecordVideoAction
-            ))
+            return isinstance(
+                self.action,
+                (
+                    types.SendMessageRecordAudioAction,
+                    types.SendMessageRecordRoundAction,
+                    types.SendMessageRecordVideoAction,
+                ),
+            )
 
         @property
         @_requires_action
@@ -186,10 +197,13 @@ class UserUpdate(EventBuilder):
             """
             `True` if what's being recorded/uploaded is an audio.
             """
-            return isinstance(self.action, (
-                types.SendMessageRecordAudioAction,
-                types.SendMessageUploadAudioAction
-            ))
+            return isinstance(
+                self.action,
+                (
+                    types.SendMessageRecordAudioAction,
+                    types.SendMessageUploadAudioAction,
+                ),
+            )
 
         @property
         @_requires_action
@@ -197,10 +211,13 @@ class UserUpdate(EventBuilder):
             """
             `True` if what's being recorded/uploaded is a round video.
             """
-            return isinstance(self.action, (
-                types.SendMessageRecordRoundAction,
-                types.SendMessageUploadRoundAction
-            ))
+            return isinstance(
+                self.action,
+                (
+                    types.SendMessageRecordRoundAction,
+                    types.SendMessageUploadRoundAction,
+                ),
+            )
 
         @property
         @_requires_action
@@ -208,10 +225,13 @@ class UserUpdate(EventBuilder):
             """
             `True` if what's being recorded/uploaded is an video.
             """
-            return isinstance(self.action, (
-                types.SendMessageRecordVideoAction,
-                types.SendMessageUploadVideoAction
-            ))
+            return isinstance(
+                self.action,
+                (
+                    types.SendMessageRecordVideoAction,
+                    types.SendMessageUploadVideoAction,
+                ),
+            )
 
         @property
         @_requires_action
@@ -265,7 +285,10 @@ class UserUpdate(EventBuilder):
 
         def _last_seen_delta(self):
             if isinstance(self.status, types.UserStatusOffline):
-                return datetime.datetime.now(tz=datetime.timezone.utc) - self.status.was_online
+                return (
+                    datetime.datetime.now(tz=datetime.timezone.utc)
+                    - self.status.was_online
+                )
             elif isinstance(self.status, types.UserStatusOnline):
                 return datetime.timedelta(days=0)
             elif isinstance(self.status, types.UserStatusRecently):

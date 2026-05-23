@@ -14,7 +14,7 @@ class MessageParseMethods:
     # region Public properties
 
     @property
-    def parse_mode(self: 'TelegramClient'):
+    def parse_mode(self: "TelegramClient"):
         """
         This property is the default parse mode used when sending messages.
         Defaults to `telethon.extensions.markdown`. It will always
@@ -50,28 +50,29 @@ class MessageParseMethods:
         return self._parse_mode
 
     @parse_mode.setter
-    def parse_mode(self: 'TelegramClient', mode: str):
+    def parse_mode(self: "TelegramClient", mode: str):
         self._parse_mode = utils.sanitize_parse_mode(mode)
 
     # endregion
 
     # region Private methods
 
-    async def _replace_with_mention(self: 'TelegramClient', entities, i, user):
+    async def _replace_with_mention(self: "TelegramClient", entities, i, user):
         """
         Helper method to replace ``entities[i]`` to mention ``user``,
         or do nothing if it can't be found.
         """
         try:
             entities[i] = types.InputMessageEntityMentionName(
-                entities[i].offset, entities[i].length,
-                await self.get_input_entity(user)
+                entities[i].offset,
+                entities[i].length,
+                await self.get_input_entity(user),
             )
             return True
         except (ValueError, TypeError):
             return False
 
-    async def _parse_message_text(self: 'TelegramClient', message, parse_mode):
+    async def _parse_message_text(self: "TelegramClient", message, parse_mode):
         """
         Returns a (parsed message, entities) tuple depending on ``parse_mode``.
         """
@@ -96,21 +97,24 @@ class MessageParseMethods:
                 # entities), strip them here rather than fixing the built-in parsers.
                 del msg_entities[i]
             elif isinstance(e, types.MessageEntityTextUrl):
-                m = re.match(r'^@|\+|tg://user\?id=(\d+)', e.url)
+                m = re.match(r"^@|\+|tg://user\?id=(\d+)", e.url)
                 if m:
                     user = int(m.group(1)) if m.group(1) else e.url
                     is_mention = await self._replace_with_mention(msg_entities, i, user)
                     if not is_mention:
                         del msg_entities[i]
-            elif isinstance(e, (types.MessageEntityMentionName,
-                                types.InputMessageEntityMentionName)):
-                is_mention = await self._replace_with_mention(msg_entities, i, e.user_id)
+            elif isinstance(
+                e, (types.MessageEntityMentionName, types.InputMessageEntityMentionName)
+            ):
+                is_mention = await self._replace_with_mention(
+                    msg_entities, i, e.user_id
+                )
                 if not is_mention:
                     del msg_entities[i]
 
         return message, msg_entities
 
-    def _get_response_message(self: 'TelegramClient', request, result, input_chat):
+    def _get_response_message(self: "TelegramClient", request, result, input_chat):
         """
         Extracts the response message known a request and Update result.
         The request may also be the ID of the message to match.
@@ -124,9 +128,10 @@ class MessageParseMethods:
             entities = {}
         elif isinstance(result, (types.Updates, types.UpdatesCombined)):
             updates = result.updates
-            entities = {utils.get_peer_id(x): x
-                        for x in
-                        itertools.chain(result.users, result.chats)}
+            entities = {
+                utils.get_peer_id(x): x
+                for x in itertools.chain(result.users, result.chats)
+            }
         else:
             return None
 
@@ -136,8 +141,9 @@ class MessageParseMethods:
             if isinstance(update, types.UpdateMessageID):
                 random_to_id[update.random_id] = update.id
 
-            elif isinstance(update, (
-                    types.UpdateNewChannelMessage, types.UpdateNewMessage)):
+            elif isinstance(
+                update, (types.UpdateNewChannelMessage, types.UpdateNewMessage)
+            ):
                 update.message._finish_init(self, entities, input_chat)
 
                 # Pinning a message with `updatePinnedMessage` seems to
@@ -147,25 +153,29 @@ class MessageParseMethods:
                 # It could also be a list (e.g. when sending albums).
                 #
                 # TODO this method is getting messier and messier as time goes on
-                if hasattr(request, 'random_id') or utils.is_list_like(request):
+                if hasattr(request, "random_id") or utils.is_list_like(request):
                     id_to_message[update.message.id] = update.message
                 else:
                     return update.message
 
-            elif (isinstance(update, types.UpdateEditMessage)
-                  and helpers._entity_type(request.peer) != helpers._EntityType.CHANNEL):
+            elif (
+                isinstance(update, types.UpdateEditMessage)
+                and helpers._entity_type(request.peer) != helpers._EntityType.CHANNEL
+            ):
                 update.message._finish_init(self, entities, input_chat)
 
                 # Live locations use `sendMedia` but Telegram responds with
                 # `updateEditMessage`, which means we won't have `id` field.
-                if hasattr(request, 'random_id'):
+                if hasattr(request, "random_id"):
                     id_to_message[update.message.id] = update.message
                 elif request.id == update.message.id:
                     return update.message
 
-            elif (isinstance(update, types.UpdateEditChannelMessage)
-                  and utils.get_peer_id(request.peer) ==
-                  utils.get_peer_id(update.message.peer_id)):
+            elif isinstance(
+                update, types.UpdateEditChannelMessage
+            ) and utils.get_peer_id(request.peer) == utils.get_peer_id(
+                update.message.peer_id
+            ):
                 if request.id == update.message.id:
                     update.message._finish_init(self, entities, input_chat)
                     return update.message
@@ -183,9 +193,8 @@ class MessageParseMethods:
                         id=request.id,
                         peer_id=utils.get_peer(request.peer),
                         media=types.MessageMediaPoll(
-                            poll=update.poll,
-                            results=update.results
-                        )
+                            poll=update.poll, results=update.results
+                        ),
                     )
                     m._finish_init(self, entities, input_chat)
                     return m
@@ -193,11 +202,18 @@ class MessageParseMethods:
         if request is None:
             return id_to_message
 
-        random_id = request if isinstance(request, (int, list)) else getattr(request, 'random_id', None)
+        random_id = (
+            request
+            if isinstance(request, (int, list))
+            else getattr(request, "random_id", None)
+        )
         if random_id is None:
             # Can happen when pinning a message does not actually produce a service message.
             self._log[__name__].warning(
-                'No random_id in %s to map to, returning None message for %s', request, result)
+                "No random_id in %s to map to, returning None message for %s",
+                request,
+                result,
+            )
             return None
 
         if not utils.is_list_like(random_id):
@@ -205,7 +221,8 @@ class MessageParseMethods:
 
             if not msg:
                 self._log[__name__].warning(
-                    'Request %s had missing message mapping %s', request, result)
+                    "Request %s had missing message mapping %s", request, result
+                )
 
             return msg
 
@@ -221,12 +238,11 @@ class MessageParseMethods:
             # be forwarded because they don't exist (0, service, deleted)
             # among others which could be (like deleted or existing).
             self._log[__name__].warning(
-                'Request %s had missing message mappings %s', request, result)
+                "Request %s had missing message mappings %s", request, result
+            )
 
         return [
-            id_to_message.get(random_to_id[rnd])
-            if rnd in random_to_id
-            else None
+            id_to_message.get(random_to_id[rnd]) if rnd in random_to_id else None
             for rnd in random_id
         ]
 

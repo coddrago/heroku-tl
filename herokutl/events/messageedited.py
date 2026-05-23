@@ -42,10 +42,12 @@ class MessageEdited(NewMessage):
                 # Log the date of new edits
                 print('Message', event.id, 'changed at', event.date)
     """
+
     @classmethod
     def build(cls, update, others=None, self_id=None):
-        if isinstance(update, (types.UpdateEditMessage,
-                               types.UpdateEditChannelMessage)):
+        if isinstance(
+            update, (types.UpdateEditMessage, types.UpdateEditChannelMessage)
+        ):
             return cls.Event(update.message)
 
     class Event(NewMessage.Event):

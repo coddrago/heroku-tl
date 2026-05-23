@@ -2,6 +2,7 @@
 Utilities for working with the Telegram API itself (such as handy methods
 to convert between an entity like a User, Chat, etc. into its Input version)
 """
+
 import base64
 import binascii
 import inspect
@@ -16,7 +17,7 @@ import struct
 from collections import namedtuple
 from mimetypes import guess_extension
 from types import GeneratorType
-import typing # skip merge
+import typing  # skip merge
 
 from .extensions import markdown, html
 from .helpers import add_surrogate, del_surrogate, strip_text
@@ -31,40 +32,35 @@ except ImportError:
 
 # Register some of the most common mime-types to avoid any issues.
 # See https://github.com/LonamiWebs/Telethon/issues/1096.
-mimetypes.add_type('image/png', '.png')
-mimetypes.add_type('image/jpeg', '.jpeg')
-mimetypes.add_type('image/webp', '.webp')
-mimetypes.add_type('image/gif', '.gif')
-mimetypes.add_type('image/bmp', '.bmp')
-mimetypes.add_type('image/x-tga', '.tga')
-mimetypes.add_type('image/tiff', '.tiff')
-mimetypes.add_type('image/vnd.adobe.photoshop', '.psd')
+mimetypes.add_type("image/png", ".png")
+mimetypes.add_type("image/jpeg", ".jpeg")
+mimetypes.add_type("image/webp", ".webp")
+mimetypes.add_type("image/gif", ".gif")
+mimetypes.add_type("image/bmp", ".bmp")
+mimetypes.add_type("image/x-tga", ".tga")
+mimetypes.add_type("image/tiff", ".tiff")
+mimetypes.add_type("image/vnd.adobe.photoshop", ".psd")
 
-mimetypes.add_type('video/mp4', '.mp4')
-mimetypes.add_type('video/quicktime', '.mov')
-mimetypes.add_type('video/avi', '.avi')
+mimetypes.add_type("video/mp4", ".mp4")
+mimetypes.add_type("video/quicktime", ".mov")
+mimetypes.add_type("video/avi", ".avi")
 
-mimetypes.add_type('audio/mpeg', '.mp3')
-mimetypes.add_type('audio/m4a', '.m4a')
-mimetypes.add_type('audio/aac', '.aac')
-mimetypes.add_type('audio/ogg', '.ogg')
-mimetypes.add_type('audio/flac', '.flac')
+mimetypes.add_type("audio/mpeg", ".mp3")
+mimetypes.add_type("audio/m4a", ".m4a")
+mimetypes.add_type("audio/aac", ".aac")
+mimetypes.add_type("audio/ogg", ".ogg")
+mimetypes.add_type("audio/flac", ".flac")
 
-mimetypes.add_type('application/x-tgsticker', '.tgs')
+mimetypes.add_type("application/x-tgsticker", ".tgs")
 
 USERNAME_RE = re.compile(
-    r'@|(?:https?://)?(?:www\.)?(?:telegram\.(?:me|dog)|t\.me)/(@|\+|joinchat/)?'
+    r"@|(?:https?://)?(?:www\.)?(?:telegram\.(?:me|dog)|t\.me)/(@|\+|joinchat/)?"
 )
-TG_JOIN_RE = re.compile(
-    r'tg://(join)\?invite='
-)
+TG_JOIN_RE = re.compile(r"tg://(join)\?invite=")
 
-VALID_USERNAME_RE = re.compile(
-    r'^[a-z](?:(?!__)\w){1,30}[a-z\d]$',
-    re.IGNORECASE
-)
+VALID_USERNAME_RE = re.compile(r"^[a-z](?:(?!__)\w){1,30}[a-z\d]$", re.IGNORECASE)
 
-_FileInfo = namedtuple('FileInfo', 'dc_id location size')
+_FileInfo = namedtuple("FileInfo", "dc_id location size")
 
 _log = logging.getLogger(__name__)
 
@@ -87,19 +83,20 @@ def get_display_name(entity):
     """
     if isinstance(entity, types.User):
         if entity.last_name and entity.first_name:
-            return '{} {}'.format(entity.first_name, entity.last_name)
+            return "{} {}".format(entity.first_name, entity.last_name)
         elif entity.first_name:
             return entity.first_name
         elif entity.last_name:
             return entity.last_name
         else:
-            return ''
+            return ""
 
-    elif isinstance(entity, (
-            types.Chat, types.ChatForbidden, types.Channel, types.ChannelForbidden)):
+    elif isinstance(
+        entity, (types.Chat, types.ChatForbidden, types.Channel, types.ChannelForbidden)
+    ):
         return entity.title
 
-    return ''
+    return ""
 
 
 def get_extension(media):
@@ -108,29 +105,29 @@ def get_extension(media):
     # Photos are always compressed as .jpg by Telegram
     try:
         get_input_photo(media)
-        return '.jpg'
+        return ".jpg"
     except TypeError:
         # These cases are not handled by input photo because it can't
         if isinstance(media, (types.UserProfilePhoto, types.ChatPhoto)):
-            return '.jpg'
+            return ".jpg"
 
     # Documents will come with a mime type
     if isinstance(media, types.MessageMediaDocument):
         media = media.document
-    if isinstance(media, (
-            types.Document, types.WebDocument, types.WebDocumentNoProxy)):
-        if media.mime_type == 'application/octet-stream':
+    if isinstance(media, (types.Document, types.WebDocument, types.WebDocumentNoProxy)):
+        if media.mime_type == "application/octet-stream":
             # Octet stream are just bytes, which have no default extension
-            return ''
+            return ""
         else:
-            return guess_extension(media.mime_type) or ''
+            return guess_extension(media.mime_type) or ""
 
-    return ''
+    return ""
 
 
 def _raise_cast_fail(entity, target):
-    raise TypeError('Cannot cast {} to any kind of {}.'.format(
-        type(entity).__name__, target))
+    raise TypeError(
+        "Cannot cast {} to any kind of {}.".format(type(entity).__name__, target)
+    )
 
 
 def get_input_peer(entity, allow_self=True, check_hash=True):
@@ -167,16 +164,16 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
     #
     # More information: https://core.telegram.org/api/min
     try:
-        if entity.SUBCLASS_OF_ID == 0xc91c90b6:  # crc32(b'InputPeer')
+        if entity.SUBCLASS_OF_ID == 0xC91C90B6:  # crc32(b'InputPeer')
             return entity
     except AttributeError:
         # e.g. custom.Dialog (can't cyclic import).
-        if allow_self and hasattr(entity, 'input_entity'):
+        if allow_self and hasattr(entity, "input_entity"):
             return entity.input_entity
-        elif hasattr(entity, 'entity'):
+        elif hasattr(entity, "entity"):
             return get_input_peer(entity.entity)
         else:
-            _raise_cast_fail(entity, 'InputPeer')
+            _raise_cast_fail(entity, "InputPeer")
 
     if isinstance(entity, types.User):
         if entity.is_self and allow_self:
@@ -184,7 +181,7 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
         elif (entity.access_hash is not None and not entity.min) or not check_hash:
             return types.InputPeerUser(entity.id, entity.access_hash)
         else:
-            raise TypeError('User without access_hash or min info cannot be input')
+            raise TypeError("User without access_hash or min info cannot be input")
 
     if isinstance(entity, (types.Chat, types.ChatEmpty, types.ChatForbidden)):
         return types.InputPeerChat(entity.id)
@@ -193,7 +190,7 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
         if (entity.access_hash is not None and not entity.min) or not check_hash:
             return types.InputPeerChannel(entity.id, entity.access_hash)
         else:
-            raise TypeError('Channel without access_hash or min info cannot be input')
+            raise TypeError("Channel without access_hash or min info cannot be input")
     if isinstance(entity, types.ChannelForbidden):
         # "channelForbidden are never min", and since their hash is
         # also not optional, we assume that this truly is the case.
@@ -209,10 +206,14 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
         return types.InputPeerSelf()
 
     if isinstance(entity, types.InputUserFromMessage):
-        return types.InputPeerUserFromMessage(entity.peer, entity.msg_id, entity.user_id)
+        return types.InputPeerUserFromMessage(
+            entity.peer, entity.msg_id, entity.user_id
+        )
 
     if isinstance(entity, types.InputChannelFromMessage):
-        return types.InputPeerChannelFromMessage(entity.peer, entity.msg_id, entity.channel_id)
+        return types.InputPeerChannelFromMessage(
+            entity.peer, entity.msg_id, entity.channel_id
+        )
 
     if isinstance(entity, types.UserEmpty):
         return types.InputPeerEmpty()
@@ -226,7 +227,7 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
     if isinstance(entity, types.PeerChat):
         return types.InputPeerChat(entity.chat_id)
 
-    _raise_cast_fail(entity, 'InputPeer')
+    _raise_cast_fail(entity, "InputPeer")
 
 
 def get_input_channel(entity):
@@ -240,10 +241,10 @@ def get_input_channel(entity):
         ``get_input_channel(get_input_peer(channel))``.
     """
     try:
-        if entity.SUBCLASS_OF_ID == 0x40f202fd:  # crc32(b'InputChannel')
+        if entity.SUBCLASS_OF_ID == 0x40F202FD:  # crc32(b'InputChannel')
             return entity
     except AttributeError:
-        _raise_cast_fail(entity, 'InputChannel')
+        _raise_cast_fail(entity, "InputChannel")
 
     if isinstance(entity, (types.Channel, types.ChannelForbidden)):
         return types.InputChannel(entity.id, entity.access_hash or 0)
@@ -252,9 +253,11 @@ def get_input_channel(entity):
         return types.InputChannel(entity.channel_id, entity.access_hash)
 
     if isinstance(entity, types.InputPeerChannelFromMessage):
-        return types.InputChannelFromMessage(entity.peer, entity.msg_id, entity.channel_id)
+        return types.InputChannelFromMessage(
+            entity.peer, entity.msg_id, entity.channel_id
+        )
 
-    _raise_cast_fail(entity, 'InputChannel')
+    _raise_cast_fail(entity, "InputChannel")
 
 
 def get_input_user(entity):
@@ -268,10 +271,10 @@ def get_input_user(entity):
         ``get_input_channel(get_input_peer(channel))``.
     """
     try:
-        if entity.SUBCLASS_OF_ID == 0xe669bf46:  # crc32(b'InputUser'):
+        if entity.SUBCLASS_OF_ID == 0xE669BF46:  # crc32(b'InputUser'):
             return entity
     except AttributeError:
-        _raise_cast_fail(entity, 'InputUser')
+        _raise_cast_fail(entity, "InputUser")
 
     if isinstance(entity, types.User):
         if entity.is_self:
@@ -294,39 +297,41 @@ def get_input_user(entity):
     if isinstance(entity, types.InputPeerUserFromMessage):
         return types.InputUserFromMessage(entity.peer, entity.msg_id, entity.user_id)
 
-    _raise_cast_fail(entity, 'InputUser')
+    _raise_cast_fail(entity, "InputUser")
 
 
 def get_input_dialog(dialog):
     """Similar to :meth:`get_input_peer`, but for dialogs"""
     try:
-        if dialog.SUBCLASS_OF_ID == 0xa21c9795:  # crc32(b'InputDialogPeer')
+        if dialog.SUBCLASS_OF_ID == 0xA21C9795:  # crc32(b'InputDialogPeer')
             return dialog
-        if dialog.SUBCLASS_OF_ID == 0xc91c90b6:  # crc32(b'InputPeer')
+        if dialog.SUBCLASS_OF_ID == 0xC91C90B6:  # crc32(b'InputPeer')
             return types.InputDialogPeer(dialog)
     except AttributeError:
-        _raise_cast_fail(dialog, 'InputDialogPeer')
+        _raise_cast_fail(dialog, "InputDialogPeer")
 
     try:
         return types.InputDialogPeer(get_input_peer(dialog))
     except TypeError:
         pass
 
-    _raise_cast_fail(dialog, 'InputDialogPeer')
+    _raise_cast_fail(dialog, "InputDialogPeer")
 
 
 def get_input_document(document):
     """Similar to :meth:`get_input_peer`, but for documents"""
     try:
-        if document.SUBCLASS_OF_ID == 0xf33fdb68:  # crc32(b'InputDocument'):
+        if document.SUBCLASS_OF_ID == 0xF33FDB68:  # crc32(b'InputDocument'):
             return document
     except AttributeError:
-        _raise_cast_fail(document, 'InputDocument')
+        _raise_cast_fail(document, "InputDocument")
 
     if isinstance(document, types.Document):
         return types.InputDocument(
-            id=document.id, access_hash=document.access_hash,
-            file_reference=document.file_reference)
+            id=document.id,
+            access_hash=document.access_hash,
+            file_reference=document.file_reference,
+        )
 
     if isinstance(document, types.DocumentEmpty):
         return types.InputDocumentEmpty()
@@ -337,16 +342,16 @@ def get_input_document(document):
     if isinstance(document, types.Message):
         return get_input_document(document.media)
 
-    _raise_cast_fail(document, 'InputDocument')
+    _raise_cast_fail(document, "InputDocument")
 
 
 def get_input_photo(photo):
     """Similar to :meth:`get_input_peer`, but for photos"""
     try:
-        if photo.SUBCLASS_OF_ID == 0x846363e0:  # crc32(b'InputPhoto'):
+        if photo.SUBCLASS_OF_ID == 0x846363E0:  # crc32(b'InputPhoto'):
             return photo
     except AttributeError:
-        _raise_cast_fail(photo, 'InputPhoto')
+        _raise_cast_fail(photo, "InputPhoto")
 
     if isinstance(photo, types.Message):
         photo = photo.media
@@ -355,8 +360,11 @@ def get_input_photo(photo):
         photo = photo.photo
 
     if isinstance(photo, types.Photo):
-        return types.InputPhoto(id=photo.id, access_hash=photo.access_hash,
-                                file_reference=photo.file_reference)
+        return types.InputPhoto(
+            id=photo.id,
+            access_hash=photo.access_hash,
+            file_reference=photo.file_reference,
+        )
 
     if isinstance(photo, types.PhotoEmpty):
         return types.InputPhotoEmpty()
@@ -371,22 +379,24 @@ def get_input_photo(photo):
     elif isinstance(photo, (types.Channel, types.Chat, types.User)):
         return get_input_photo(photo.photo)
 
-    if isinstance(photo, (types.UserEmpty, types.ChatEmpty,
-                          types.ChatForbidden, types.ChannelForbidden)):
+    if isinstance(
+        photo,
+        (types.UserEmpty, types.ChatEmpty, types.ChatForbidden, types.ChannelForbidden),
+    ):
         return types.InputPhotoEmpty()
 
-    _raise_cast_fail(photo, 'InputPhoto')
+    _raise_cast_fail(photo, "InputPhoto")
 
 
 def get_input_chat_photo(photo):
     """Similar to :meth:`get_input_peer`, but for chat photos"""
     try:
-        if photo.SUBCLASS_OF_ID == 0xd4eb2d74:  # crc32(b'InputChatPhoto')
+        if photo.SUBCLASS_OF_ID == 0xD4EB2D74:  # crc32(b'InputChatPhoto')
             return photo
-        elif photo.SUBCLASS_OF_ID == 0xe7655f1f:  # crc32(b'InputFile'):
+        elif photo.SUBCLASS_OF_ID == 0xE7655F1F:  # crc32(b'InputFile'):
             return types.InputChatUploadedPhoto(photo)
     except AttributeError:
-        _raise_cast_fail(photo, 'InputChatPhoto')
+        _raise_cast_fail(photo, "InputChatPhoto")
 
     photo = get_input_photo(photo)
     if isinstance(photo, types.InputPhoto):
@@ -394,16 +404,16 @@ def get_input_chat_photo(photo):
     elif isinstance(photo, types.InputPhotoEmpty):
         return types.InputChatPhotoEmpty()
 
-    _raise_cast_fail(photo, 'InputChatPhoto')
+    _raise_cast_fail(photo, "InputChatPhoto")
 
 
 def get_input_geo(geo):
     """Similar to :meth:`get_input_peer`, but for geo points"""
     try:
-        if geo.SUBCLASS_OF_ID == 0x430d225:  # crc32(b'InputGeoPoint'):
+        if geo.SUBCLASS_OF_ID == 0x430D225:  # crc32(b'InputGeoPoint'):
             return geo
     except AttributeError:
-        _raise_cast_fail(geo, 'InputGeoPoint')
+        _raise_cast_fail(geo, "InputGeoPoint")
 
     if isinstance(geo, types.GeoPoint):
         return types.InputGeoPoint(lat=geo.lat, long=geo.long)
@@ -417,14 +427,19 @@ def get_input_geo(geo):
     if isinstance(geo, types.Message):
         return get_input_geo(geo.media)
 
-    _raise_cast_fail(geo, 'InputGeoPoint')
+    _raise_cast_fail(geo, "InputGeoPoint")
 
 
 def get_input_media(
-        media, *,
-        is_photo=False, attributes=None, force_document=False,
-        voice_note=False, video_note=False, supports_streaming=False,
-        ttl=None
+    media,
+    *,
+    is_photo=False,
+    attributes=None,
+    force_document=False,
+    voice_note=False,
+    video_note=False,
+    supports_streaming=False,
+    ttl=None
 ):
     """
     Similar to :meth:`get_input_peer`, but for media.
@@ -434,40 +449,34 @@ def get_input_media(
     of parameters will indicate how to treat it.
     """
     try:
-        if media.SUBCLASS_OF_ID == 0xfaf846f4:  # crc32(b'InputMedia')
+        if media.SUBCLASS_OF_ID == 0xFAF846F4:  # crc32(b'InputMedia')
             return media
-        elif media.SUBCLASS_OF_ID == 0x846363e0:  # crc32(b'InputPhoto')
+        elif media.SUBCLASS_OF_ID == 0x846363E0:  # crc32(b'InputPhoto')
             return types.InputMediaPhoto(media, ttl_seconds=ttl)
-        elif media.SUBCLASS_OF_ID == 0xf33fdb68:  # crc32(b'InputDocument')
+        elif media.SUBCLASS_OF_ID == 0xF33FDB68:  # crc32(b'InputDocument')
             return types.InputMediaDocument(media, ttl_seconds=ttl)
     except AttributeError:
-        _raise_cast_fail(media, 'InputMedia')
+        _raise_cast_fail(media, "InputMedia")
 
     if isinstance(media, types.MessageMediaPhoto):
         return types.InputMediaPhoto(
             id=get_input_photo(media.photo),
             spoiler=media.spoiler,
-            ttl_seconds=ttl or media.ttl_seconds
+            ttl_seconds=ttl or media.ttl_seconds,
         )
 
     if isinstance(media, (types.Photo, types.photos.Photo, types.PhotoEmpty)):
-        return types.InputMediaPhoto(
-            id=get_input_photo(media),
-            ttl_seconds=ttl
-        )
+        return types.InputMediaPhoto(id=get_input_photo(media), ttl_seconds=ttl)
 
     if isinstance(media, types.MessageMediaDocument):
         return types.InputMediaDocument(
             id=get_input_document(media.document),
             spoiler=media.spoiler,
-            ttl_seconds=ttl or media.ttl_seconds
+            ttl_seconds=ttl or media.ttl_seconds,
         )
 
     if isinstance(media, (types.Document, types.DocumentEmpty)):
-        return types.InputMediaDocument(
-            id=get_input_document(media),
-            ttl_seconds=ttl
-        )
+        return types.InputMediaDocument(id=get_input_document(media), ttl_seconds=ttl)
 
     if isinstance(media, (types.InputFile, types.InputFileBig)):
         if is_photo:
@@ -479,24 +488,27 @@ def get_input_media(
                 force_document=force_document,
                 voice_note=voice_note,
                 video_note=video_note,
-                supports_streaming=supports_streaming
+                supports_streaming=supports_streaming,
             )
             return types.InputMediaUploadedDocument(
-                file=media, mime_type=mime, attributes=attrs, force_file=force_document,
-                ttl_seconds=ttl)
+                file=media,
+                mime_type=mime,
+                attributes=attrs,
+                force_file=force_document,
+                ttl_seconds=ttl,
+            )
 
     if isinstance(media, types.MessageMediaGame):
-        return types.InputMediaGame(id=types.InputGameID(
-            id=media.game.id,
-            access_hash=media.game.access_hash
-        ))
+        return types.InputMediaGame(
+            id=types.InputGameID(id=media.game.id, access_hash=media.game.access_hash)
+        )
 
     if isinstance(media, types.MessageMediaContact):
         return types.InputMediaContact(
             phone_number=media.phone_number,
             first_name=media.first_name,
             last_name=media.last_name,
-            vcard=''
+            vcard="",
         )
 
     if isinstance(media, types.MessageMediaGeo):
@@ -517,16 +529,23 @@ def get_input_media(
             address=media.address,
             provider=media.provider,
             venue_id=media.venue_id,
-            venue_type=''
+            venue_type="",
         )
 
     if isinstance(media, types.MessageMediaDice):
         return types.InputMediaDice(media.emoticon)
 
-    if isinstance(media, (
-            types.MessageMediaEmpty, types.MessageMediaUnsupported,
-            types.ChatPhotoEmpty, types.UserProfilePhotoEmpty,
-            types.ChatPhoto, types.UserProfilePhoto)):
+    if isinstance(
+        media,
+        (
+            types.MessageMediaEmpty,
+            types.MessageMediaUnsupported,
+            types.ChatPhotoEmpty,
+            types.UserProfilePhotoEmpty,
+            types.ChatPhoto,
+            types.UserProfilePhoto,
+        ),
+    ):
         return types.InputMediaEmpty()
 
     if isinstance(media, types.Message):
@@ -537,7 +556,9 @@ def get_input_media(
             if not media.results.results:
                 # A quiz has correct answers, which we don't know until answered.
                 # If the quiz hasn't been answered we can't reconstruct it properly.
-                raise TypeError('Cannot cast unanswered quiz to any kind of InputMedia.')
+                raise TypeError(
+                    "Cannot cast unanswered quiz to any kind of InputMedia."
+                )
 
             correct_answers = [r.option for r in media.results.results if r.correct]
         else:
@@ -553,7 +574,7 @@ def get_input_media(
     if isinstance(media, types.Poll):
         return types.InputMediaPoll(media)
 
-    _raise_cast_fail(media, 'InputMedia')
+    _raise_cast_fail(media, "InputMedia")
 
 
 def get_input_message(message):
@@ -561,29 +582,28 @@ def get_input_message(message):
     try:
         if isinstance(message, int):  # This case is really common too
             return types.InputMessageID(message)
-        elif message.SUBCLASS_OF_ID == 0x54b6bcc5:  # crc32(b'InputMessage'):
+        elif message.SUBCLASS_OF_ID == 0x54B6BCC5:  # crc32(b'InputMessage'):
             return message
-        elif message.SUBCLASS_OF_ID == 0x790009e3:  # crc32(b'Message'):
+        elif message.SUBCLASS_OF_ID == 0x790009E3:  # crc32(b'Message'):
             return types.InputMessageID(message.id)
     except AttributeError:
         pass
 
-    _raise_cast_fail(message, 'InputMedia')
+    _raise_cast_fail(message, "InputMedia")
 
 
 def get_input_group_call(call):
     """Similar to :meth:`get_input_peer`, but for input calls."""
     try:
-        if call.SUBCLASS_OF_ID == 0x58611ab1:  # crc32(b'InputGroupCall')
+        if call.SUBCLASS_OF_ID == 0x58611AB1:  # crc32(b'InputGroupCall')
             return call
-        elif call.SUBCLASS_OF_ID == 0x20b4f320:  # crc32(b'GroupCall')
+        elif call.SUBCLASS_OF_ID == 0x20B4F320:  # crc32(b'GroupCall')
             return types.InputGroupCall(id=call.id, access_hash=call.access_hash)
     except AttributeError:
-        _raise_cast_fail(call, 'InputGroupCall')
+        _raise_cast_fail(call, "InputGroupCall")
 
 
-def _get_entity_pair(entity_id, entities, cache,
-                     get_input_peer=get_input_peer):
+def _get_entity_pair(entity_id, entities, cache, get_input_peer=get_input_peer):
     """
     Returns ``(entity, input_entity)`` for the given entity ID.
     """
@@ -615,13 +635,13 @@ def get_message_id(message):
         return message.id
 
     try:
-        if message.SUBCLASS_OF_ID == 0x790009e3:
+        if message.SUBCLASS_OF_ID == 0x790009E3:
             # hex(crc32(b'Message')) = 0x790009e3
             return message.id
     except AttributeError:
         pass
 
-    raise TypeError('Invalid message type: {}'.format(type(message)))
+    raise TypeError("Invalid message type: {}".format(type(message)))
 
 
 def _get_metadata(file):
@@ -639,13 +659,13 @@ def _get_metadata(file):
         # `helpers._FileStream` is async only for simplicity too, so can't
         # reuse it here.
         if isinstance(file, str):
-            stream = open(file, 'rb')
+            stream = open(file, "rb")
         elif isinstance(file, bytes):
             stream = io.BytesIO(file)
         else:
             stream = file
             close_stream = False
-            if getattr(file, 'seekable', None):
+            if getattr(file, "seekable", None):
                 seekable = file.seekable()
             else:
                 seekable = False
@@ -654,19 +674,18 @@ def _get_metadata(file):
             return None
 
         pos = stream.tell()
-        filename = getattr(file, 'name', '')
+        filename = getattr(file, "name", "")
 
-        parser = hachoir.parser.guess.guessParser(hachoir.stream.InputIOStream(
-            stream,
-            source='file:' + filename,
-            tags=[],
-            filename=filename
-        ))
+        parser = hachoir.parser.guess.guessParser(
+            hachoir.stream.InputIOStream(
+                stream, source="file:" + filename, tags=[], filename=filename
+            )
+        )
 
         return hachoir.metadata.extractMetadata(parser)
 
     except Exception as e:
-        _log.warning('Failed to analyze %s: %s %s', file, e.__class__, e)
+        _log.warning("Failed to analyze %s: %s %s", file, e.__class__, e)
 
     finally:
         if stream and close_stream:
@@ -675,50 +694,58 @@ def _get_metadata(file):
             stream.seek(pos)
 
 
-def get_attributes(file, *, attributes=None, mime_type=None,
-                   force_document=False, voice_note=False, video_note=False,
-                   supports_streaming=False, thumb=None):
+def get_attributes(
+    file,
+    *,
+    attributes=None,
+    mime_type=None,
+    force_document=False,
+    voice_note=False,
+    video_note=False,
+    supports_streaming=False,
+    thumb=None
+):
     """
     Get a list of attributes for the given file and
     the mime type as a tuple ([attribute], mime_type).
     """
     # Note: ``file.name`` works for :tl:`InputFile` and some `IOBase` streams
-    name = file if isinstance(file, str) else getattr(file, 'name', 'unnamed')
+    name = file if isinstance(file, str) else getattr(file, "name", "unnamed")
     if mime_type is None:
         mime_type = mimetypes.guess_type(name)[0]
 
-    attr_dict = {types.DocumentAttributeFilename:
-        types.DocumentAttributeFilename(os.path.basename(name))}
+    attr_dict = {
+        types.DocumentAttributeFilename: types.DocumentAttributeFilename(
+            os.path.basename(name)
+        )
+    }
 
     if is_audio(file):
         m = _get_metadata(file)
         if m:
-            if m.has('author'):
-                performer = m.get('author')
-            elif m.has('artist'):
-                performer = m.get('artist')
+            if m.has("author"):
+                performer = m.get("author")
+            elif m.has("artist"):
+                performer = m.get("artist")
             else:
                 performer = None
 
-            attr_dict[types.DocumentAttributeAudio] = \
-                types.DocumentAttributeAudio(
-                    voice=voice_note,
-                    title=m.get('title') if m.has('title') else None,
-                    performer=performer,
-                    duration=int(m.get('duration').seconds
-                                 if m.has('duration') else 0)
-                )
+            attr_dict[types.DocumentAttributeAudio] = types.DocumentAttributeAudio(
+                voice=voice_note,
+                title=m.get("title") if m.has("title") else None,
+                performer=performer,
+                duration=int(m.get("duration").seconds if m.has("duration") else 0),
+            )
 
     if not force_document and is_video(file):
         m = _get_metadata(file)
         if m:
             doc = types.DocumentAttributeVideo(
                 round_message=video_note,
-                w=m.get('width') if m.has('width') else 1,
-                h=m.get('height') if m.has('height') else 1,
-                duration=int(m.get('duration').seconds
-                             if m.has('duration') else 1),
-                supports_streaming=supports_streaming
+                w=m.get("width") if m.has("width") else 1,
+                h=m.get("height") if m.has("height") else 1,
+                duration=int(m.get("duration").seconds if m.has("duration") else 1),
+                supports_streaming=supports_streaming,
             )
         elif thumb:
             t_m = _get_metadata(thumb)
@@ -730,12 +757,16 @@ def get_attributes(file, *, attributes=None, mime_type=None,
                 height = t_m.get("height")
 
             doc = types.DocumentAttributeVideo(
-                0, width, height, round_message=video_note,
-                supports_streaming=supports_streaming)
+                0,
+                width,
+                height,
+                round_message=video_note,
+                supports_streaming=supports_streaming,
+            )
         else:
             doc = types.DocumentAttributeVideo(
-                0, 1, 1, round_message=video_note,
-                supports_streaming=supports_streaming)
+                0, 1, 1, round_message=video_note, supports_streaming=supports_streaming
+            )
 
         attr_dict[types.DocumentAttributeVideo] = doc
 
@@ -743,8 +774,9 @@ def get_attributes(file, *, attributes=None, mime_type=None,
         if types.DocumentAttributeAudio in attr_dict:
             attr_dict[types.DocumentAttributeAudio].voice = True
         else:
-            attr_dict[types.DocumentAttributeAudio] = \
-                types.DocumentAttributeAudio(0, voice=True)
+            attr_dict[types.DocumentAttributeAudio] = types.DocumentAttributeAudio(
+                0, voice=True
+            )
 
     # Now override the attributes if any. As we have a dict of
     # {cls: instance}, we can override any class with the list
@@ -757,7 +789,7 @@ def get_attributes(file, *, attributes=None, mime_type=None,
     # 'The "octet-stream" subtype is used to indicate that a body
     # contains arbitrary binary data.'
     if not mime_type:
-        mime_type = 'application/octet-stream'
+        mime_type = "application/octet-stream"
 
     return list(attr_dict.values()), mime_type
 
@@ -770,10 +802,12 @@ def sanitize_parse_mode(mode):
     if not mode:
         return None
 
-    if (all(hasattr(mode, x) for x in ('parse', 'unparse'))
-          and all(callable(x) for x in (mode.parse, mode.unparse))):
+    if all(hasattr(mode, x) for x in ("parse", "unparse")) and all(
+        callable(x) for x in (mode.parse, mode.unparse)
+    ):
         return mode
     elif callable(mode):
+
         class CustomMode:
             @staticmethod
             def unparse(text, entities):
@@ -783,16 +817,13 @@ def sanitize_parse_mode(mode):
         return CustomMode
     elif isinstance(mode, str):
         try:
-            return {
-                'md': markdown,
-                'markdown': markdown,
-                'htm': html,
-                'html': html
-            }[mode.lower()]
+            return {"md": markdown, "markdown": markdown, "htm": html, "html": html}[
+                mode.lower()
+            ]
         except KeyError:
-            raise ValueError('Unknown parse mode {}'.format(mode))
+            raise ValueError("Unknown parse mode {}".format(mode))
     else:
-        raise TypeError('Invalid parse mode type {}'.format(mode))
+        raise TypeError("Invalid parse mode type {}".format(mode))
 
 
 def get_input_location(location):
@@ -808,10 +839,10 @@ def get_input_location(location):
 
 def _get_file_info(location):
     try:
-        if location.SUBCLASS_OF_ID == 0x1523d462:
+        if location.SUBCLASS_OF_ID == 0x1523D462:
             return _FileInfo(None, location, None)  # crc32(b'InputFileLocation'):
     except AttributeError:
-        _raise_cast_fail(location, 'InputFileLocation')
+        _raise_cast_fail(location, "InputFileLocation")
 
     if isinstance(location, types.Message):
         location = location.media
@@ -822,21 +853,29 @@ def _get_file_info(location):
         location = location.photo
 
     if isinstance(location, types.Document):
-        return _FileInfo(location.dc_id, types.InputDocumentFileLocation(
-            id=location.id,
-            access_hash=location.access_hash,
-            file_reference=location.file_reference,
-            thumb_size=''  # Presumably to download one of its thumbnails
-        ), location.size)
+        return _FileInfo(
+            location.dc_id,
+            types.InputDocumentFileLocation(
+                id=location.id,
+                access_hash=location.access_hash,
+                file_reference=location.file_reference,
+                thumb_size="",  # Presumably to download one of its thumbnails
+            ),
+            location.size,
+        )
     elif isinstance(location, types.Photo):
-        return _FileInfo(location.dc_id, types.InputPhotoFileLocation(
-            id=location.id,
-            access_hash=location.access_hash,
-            file_reference=location.file_reference,
-            thumb_size=location.sizes[-1].type
-        ), _photo_size_byte_count(location.sizes[-1]))
+        return _FileInfo(
+            location.dc_id,
+            types.InputPhotoFileLocation(
+                id=location.id,
+                access_hash=location.access_hash,
+                file_reference=location.file_reference,
+                thumb_size=location.sizes[-1].type,
+            ),
+            _photo_size_byte_count(location.sizes[-1]),
+        )
 
-    _raise_cast_fail(location, 'InputFileLocation')
+    _raise_cast_fail(location, "InputFileLocation")
 
 
 def _get_extension(file):
@@ -848,7 +887,7 @@ def _get_extension(file):
         return os.path.splitext(file)[-1]
     elif isinstance(file, pathlib.Path):
         return file.suffix
-    elif getattr(file, 'name', None):
+    elif getattr(file, "name", None):
         # Note: ``file.name`` works for :tl:`InputFile` and some `IOBase`
         return _get_extension(file.name)
     else:
@@ -860,7 +899,7 @@ def is_image(file):
     """
     Returns `True` if the file extension looks like an image file to Telegram.
     """
-    match = re.match(r'\.(png|jpe?g)', _get_extension(file), re.IGNORECASE)
+    match = re.match(r"\.(png|jpe?g)", _get_extension(file), re.IGNORECASE)
     if match:
         return True
     else:
@@ -871,7 +910,7 @@ def is_gif(file):
     """
     Returns `True` if the file extension looks like a gif file to Telegram.
     """
-    return re.match(r'\.gif', _get_extension(file), re.IGNORECASE)
+    return re.match(r"\.gif", _get_extension(file), re.IGNORECASE)
 
 
 def is_audio(file):
@@ -879,13 +918,13 @@ def is_audio(file):
     ext = _get_extension(file)
     if not ext:
         metadata = _get_metadata(file)
-        if metadata and metadata.has('mime_type'):
-            return metadata.get('mime_type').startswith('audio/')
+        if metadata and metadata.has("mime_type"):
+            return metadata.get("mime_type").startswith("audio/")
         else:
             return False
     else:
-        file = 'a' + ext
-        return (mimetypes.guess_type(file)[0] or '').startswith('audio/')
+        file = "a" + ext
+        return (mimetypes.guess_type(file)[0] or "").startswith("audio/")
 
 
 def is_video(file):
@@ -893,13 +932,13 @@ def is_video(file):
     ext = _get_extension(file)
     if not ext:
         metadata = _get_metadata(file)
-        if metadata and metadata.has('mime_type'):
-            return metadata.get('mime_type').startswith('video/')
+        if metadata and metadata.has("mime_type"):
+            return metadata.get("mime_type").startswith("video/")
         else:
             return False
     else:
-        file = 'a' + ext
-        return (mimetypes.guess_type(file)[0] or '').startswith('video/')
+        file = "a" + ext
+        return (mimetypes.guess_type(file)[0] or "").startswith("video/")
 
 
 def is_list_like(obj):
@@ -918,7 +957,7 @@ def parse_phone(phone):
     if isinstance(phone, int):
         return str(phone)
     else:
-        phone = re.sub(r'[+()\s-]', '', str(phone))
+        phone = re.sub(r"[+()\s-]", "", str(phone))
         if phone.isdigit():
             return phone
 
@@ -935,12 +974,12 @@ def parse_username(username):
     username = username.strip()
     m = USERNAME_RE.match(username) or TG_JOIN_RE.match(username)
     if m:
-        username = username[m.end():]
+        username = username[m.end() :]
         is_invite = bool(m.group(1))
         if is_invite:
             return username, True
         else:
-            username = username.rstrip('/')
+            username = username.rstrip("/")
 
     if VALID_USERNAME_RE.match(username):
         return username.lower(), False
@@ -972,11 +1011,18 @@ def get_peer(peer):
         if isinstance(peer, int):
             pid, cls = resolve_id(peer)
             return cls(pid)
-        elif peer.SUBCLASS_OF_ID == 0x2d45687:
+        elif peer.SUBCLASS_OF_ID == 0x2D45687:
             return peer
-        elif isinstance(peer, (
-                types.contacts.ResolvedPeer, types.InputNotifyPeer,
-                types.TopPeer, types.Dialog, types.DialogPeer)):
+        elif isinstance(
+            peer,
+            (
+                types.contacts.ResolvedPeer,
+                types.InputNotifyPeer,
+                types.TopPeer,
+                types.Dialog,
+                types.DialogPeer,
+            ),
+        ):
             return peer.peer
         elif isinstance(peer, types.ChannelFull):
             return types.PeerChannel(peer.id)
@@ -985,7 +1031,7 @@ def get_peer(peer):
         elif isinstance(peer, types.ChatEmpty):
             return types.PeerChat(peer.id)
 
-        if peer.SUBCLASS_OF_ID in (0x7d7c6f86, 0xd9c7fc18):
+        if peer.SUBCLASS_OF_ID in (0x7D7C6F86, 0xD9C7FC18):
             # ChatParticipant, ChannelParticipant
             return types.PeerUser(peer.user_id)
 
@@ -994,11 +1040,13 @@ def get_peer(peer):
             return types.PeerUser(peer.user_id)
         elif isinstance(peer, types.InputPeerChat):
             return types.PeerChat(peer.chat_id)
-        elif isinstance(peer, (types.InputPeerChannel, types.InputPeerChannelFromMessage)):
+        elif isinstance(
+            peer, (types.InputPeerChannel, types.InputPeerChannelFromMessage)
+        ):
             return types.PeerChannel(peer.channel_id)
     except (AttributeError, TypeError):
         pass
-    _raise_cast_fail(peer, 'Peer')
+    _raise_cast_fail(peer, "Peer")
 
 
 def get_peer_id(peer, add_mark=True):
@@ -1022,12 +1070,12 @@ def get_peer_id(peer, add_mark=True):
 
     # Tell the user to use their client to resolve InputPeerSelf if we got one
     if isinstance(peer, types.InputPeerSelf):
-        _raise_cast_fail(peer, 'int (you might want to use client.get_peer_id)')
+        _raise_cast_fail(peer, "int (you might want to use client.get_peer_id)")
 
     try:
         peer = get_peer(peer)
     except TypeError:
-        _raise_cast_fail(peer, 'int')
+        _raise_cast_fail(peer, "int")
 
     if isinstance(peer, types.PeerUser):
         return peer.user_id
@@ -1069,12 +1117,12 @@ def _rle_decode(data):
     if not data:
         return data
 
-    new = b''
-    last = b''
+    new = b""
+    last = b""
     for cur in data:
-        if last == b'\0':
+        if last == b"\0":
             new += last * cur
-            last = b''
+            last = b""
         else:
             new += last
             last = bytes([cur])
@@ -1083,19 +1131,19 @@ def _rle_decode(data):
 
 
 def _rle_encode(string):
-    new = b''
+    new = b""
     count = 0
     for cur in string:
         if not cur:
             count += 1
         else:
             if count:
-                new += b'\0' + bytes([count])
+                new += b"\0" + bytes([count])
                 count = 0
 
             new += bytes([cur])
     if count != 0:
-        new += b'\0' + bytes([count])
+        new += b"\0" + bytes([count])
     return new
 
 
@@ -1110,7 +1158,7 @@ def _decode_telegram_base64(string):
     Returns `None` if the input string was not valid.
     """
     try:
-        return base64.urlsafe_b64decode(string + '=' * (len(string) % 4))
+        return base64.urlsafe_b64decode(string + "=" * (len(string) % 4))
     except (binascii.Error, ValueError, TypeError):
         return None  # not valid base64, not valid ascii, not a string
 
@@ -1120,7 +1168,7 @@ def _encode_telegram_base64(string):
     Inverse for `_decode_telegram_base64`.
     """
     try:
-        return base64.urlsafe_b64encode(string).rstrip(b'=').decode('ascii')
+        return base64.urlsafe_b64encode(string).rstrip(b"=").decode("ascii")
     except (binascii.Error, ValueError, TypeError):
         return None  # not valid base64, not valid ascii, not a string
 
@@ -1148,11 +1196,11 @@ def resolve_bot_file_id(file_id):
 
     if (version == 2 and len(data) == 24) or (version == 4 and len(data) == 25):
         if version == 2:
-            file_type, dc_id, media_id, access_hash = struct.unpack('<iiqq', data)
+            file_type, dc_id, media_id, access_hash = struct.unpack("<iiqq", data)
         # elif version == 4:
         else:
             # TODO Figure out what the extra byte means
-            file_type, dc_id, media_id, access_hash, _ = struct.unpack('<iiqqb', data)
+            file_type, dc_id, media_id, access_hash, _ = struct.unpack("<iiqqb", data)
 
         if not (1 <= dc_id <= 5):
             # Valid `file_id`'s must have valid DC IDs. Since this method is
@@ -1165,23 +1213,22 @@ def resolve_bot_file_id(file_id):
 
         attributes = []
         if file_type == 3 or file_type == 9:
-            attributes.append(types.DocumentAttributeAudio(
-                duration=0,
-                voice=file_type == 3
-            ))
+            attributes.append(
+                types.DocumentAttributeAudio(duration=0, voice=file_type == 3)
+            )
         elif file_type == 4 or file_type == 13:
-            attributes.append(types.DocumentAttributeVideo(
-                duration=0,
-                w=0,
-                h=0,
-                round_message=file_type == 13
-            ))
+            attributes.append(
+                types.DocumentAttributeVideo(
+                    duration=0, w=0, h=0, round_message=file_type == 13
+                )
+            )
         # elif file_type == 5:  # other, cannot know which
         elif file_type == 8:
-            attributes.append(types.DocumentAttributeSticker(
-                alt='',
-                stickerset=types.InputStickerSetEmpty()
-            ))
+            attributes.append(
+                types.DocumentAttributeSticker(
+                    alt="", stickerset=types.InputStickerSetEmpty()
+                )
+            )
         elif file_type == 10:
             attributes.append(types.DocumentAttributeAnimated())
 
@@ -1189,25 +1236,36 @@ def resolve_bot_file_id(file_id):
             id=media_id,
             access_hash=access_hash,
             date=None,
-            mime_type='',
+            mime_type="",
             size=0,
             thumbs=None,
             dc_id=dc_id,
             attributes=attributes,
-            file_reference=b''
+            file_reference=b"",
         )
     elif (version == 2 and len(data) == 44) or (version == 4 and len(data) in (49, 77)):
         if version == 2:
-            (file_type, dc_id, media_id, access_hash,
-                volume_id, secret, local_id) = struct.unpack('<iiqqqqi', data)
+            file_type, dc_id, media_id, access_hash, volume_id, secret, local_id = (
+                struct.unpack("<iiqqqqi", data)
+            )
         # else version == 4:
         elif len(data) == 49:
             # TODO Figure out what the extra five bytes mean
-            (file_type, dc_id, media_id, access_hash,
-                volume_id, secret, local_id, _) = struct.unpack('<iiqqqqi5s', data)
+            (
+                file_type,
+                dc_id,
+                media_id,
+                access_hash,
+                volume_id,
+                secret,
+                local_id,
+                _,
+            ) = struct.unpack("<iiqqqqi5s", data)
         elif len(data) == 77:
             # See #1613.
-            (file_type, dc_id, _, media_id, access_hash, volume_id, _, local_id, _) = struct.unpack('<ii28sqqq12sib', data)
+            file_type, dc_id, _, media_id, access_hash, volume_id, _, local_id, _ = (
+                struct.unpack("<ii28sqqq12sib", data)
+            )
         else:
             return None
 
@@ -1215,20 +1273,15 @@ def resolve_bot_file_id(file_id):
             return None
 
         # Thumbnails (small) always have ID 0; otherwise size 'x'
-        photo_size = 's' if media_id or access_hash else 'x'
+        photo_size = "s" if media_id or access_hash else "x"
         return types.Photo(
             id=media_id,
             access_hash=access_hash,
-            file_reference=b'',
+            file_reference=b"",
             date=None,
-            sizes=[types.PhotoSize(
-                type=photo_size,
-                w=0,
-                h=0,
-                size=0
-            )],
+            sizes=[types.PhotoSize(type=photo_size, w=0, h=0, size=0)],
             dc_id=dc_id,
-            has_stickers=None
+            has_stickers=None,
         )
 
 
@@ -1261,21 +1314,43 @@ def pack_bot_file_id(file):
                 continue
             break
 
-        return _encode_telegram_base64(_rle_encode(struct.pack(
-            '<iiqqb', file_type, file.dc_id, file.id, file.access_hash, 2)))
+        return _encode_telegram_base64(
+            _rle_encode(
+                struct.pack(
+                    "<iiqqb", file_type, file.dc_id, file.id, file.access_hash, 2
+                )
+            )
+        )
 
     elif isinstance(file, types.Photo):
-        size = next((x for x in reversed(file.sizes) if isinstance(
-            x, (types.PhotoSize, types.PhotoCachedSize))), None)
+        size = next(
+            (
+                x
+                for x in reversed(file.sizes)
+                if isinstance(x, (types.PhotoSize, types.PhotoCachedSize))
+            ),
+            None,
+        )
 
         if not size:
             return None
 
         size = size.location
-        return _encode_telegram_base64(_rle_encode(struct.pack(
-            '<iiqqqqib', 2, file.dc_id, file.id, file.access_hash,
-            size.volume_id, 0, size.local_id, 2  # 0 = old `secret`
-        )))
+        return _encode_telegram_base64(
+            _rle_encode(
+                struct.pack(
+                    "<iiqqqqib",
+                    2,
+                    file.dc_id,
+                    file.id,
+                    file.access_hash,
+                    size.volume_id,
+                    0,
+                    size.local_id,
+                    2,  # 0 = old `secret`
+                )
+            )
+        )
     else:
         return None
 
@@ -1300,16 +1375,16 @@ def resolve_invite_link(link):
 
     # Little known fact, but invite links with a
     # hex-string of bytes instead of base64 also works.
-    if re.match(r'[a-fA-F\d]+', link_hash) and len(link_hash) in (24, 32):
+    if re.match(r"[a-fA-F\d]+", link_hash) and len(link_hash) in (24, 32):
         payload = bytes.fromhex(link_hash)
     else:
         payload = _decode_telegram_base64(link_hash)
 
     try:
         if len(payload) == 12:
-            return (0, *struct.unpack('>LQ', payload))
+            return (0, *struct.unpack(">LQ", payload))
         elif len(payload) == 16:
-            return struct.unpack('>LLQ', payload)
+            return struct.unpack(">LLQ", payload)
         else:
             pass
     except (struct.error, TypeError):
@@ -1330,8 +1405,9 @@ def resolve_inline_message_id(inline_msg_id):
     The ``access_hash`` does not have any use yet.
     """
     try:
-        dc_id, message_id, pid, access_hash = \
-            struct.unpack('<iiiq', _decode_telegram_base64(inline_msg_id))
+        dc_id, message_id, pid, access_hash = struct.unpack(
+            "<iiiq", _decode_telegram_base64(inline_msg_id)
+        )
         peer = types.PeerChannel(-pid) if pid < 0 else types.PeerUser(pid)
         return message_id, peer, dc_id, access_hash
     except (struct.error, TypeError):
@@ -1384,9 +1460,9 @@ def encode_waveform(waveform):
         byte_index, bit_shift = divmod(i * 5, 8)
         value = (waveform[i] & 0b00011111) << bit_shift
 
-        or_what = struct.unpack('<H', (result[byte_index:byte_index + 2]))[0]
+        or_what = struct.unpack("<H", (result[byte_index : byte_index + 2]))[0]
         or_what |= value
-        result[byte_index:byte_index + 2] = struct.pack('<H', or_what)
+        result[byte_index : byte_index + 2] = struct.pack("<H", or_what)
 
     return bytes(result[:bytes_count])
 
@@ -1398,25 +1474,27 @@ def decode_waveform(waveform):
     bit_count = len(waveform) * 8
     value_count = bit_count // 5
     if value_count == 0:
-        return b''
+        return b""
 
     result = bytearray(value_count)
     for i in range(value_count - 1):
         byte_index, bit_shift = divmod(i * 5, 8)
-        value = struct.unpack('<H', waveform[byte_index:byte_index + 2])[0]
+        value = struct.unpack("<H", waveform[byte_index : byte_index + 2])[0]
         result[i] = (value >> bit_shift) & 0b00011111
 
     byte_index, bit_shift = divmod(value_count - 1, 8)
     if byte_index == len(waveform) - 1:
         value = waveform[byte_index]
     else:
-        value = struct.unpack('<H', waveform[byte_index:byte_index + 2])[0]
+        value = struct.unpack("<H", waveform[byte_index : byte_index + 2])[0]
 
     result[value_count - 1] = (value >> bit_shift) & 0b00011111
     return bytes(result)
 
 
-def split_text(text, entities, *, limit=4096, max_entities=100, split_at=(r'\n', r'\s', '.')):
+def split_text(
+    text, entities, *, limit=4096, max_entities=100, split_at=(r"\n", r"\s", ".")
+):
     """
     Split a message text and entities into multiple messages, each with their
     own set of entities. This allows sending a very large message as multiple
@@ -1461,11 +1539,12 @@ def split_text(text, entities, *, limit=4096, max_entities=100, split_at=(r'\n',
             for text, entities in utils.split_text(text, entities):
                 await client.send_message(chat, text, formatting_entities=entities)
     """
+
     # TODO add test cases (multiple entities beyond cutoff, at cutoff, splitting at emoji)
     # TODO try to optimize this a bit more? (avoid new_ent, smarter update method)
     def update(ent, **updates):
         kwargs = ent.to_dict()
-        del kwargs['_']
+        del kwargs["_"]
         kwargs.update(updates)
         return ent.__class__(**kwargs)
 
@@ -1486,13 +1565,19 @@ def split_text(text, entities, *, limit=4096, max_entities=100, split_at=(r'\n',
             for i in reversed(range(cur_limit)):
                 m = split.match(text, pos=i)
                 if m:
-                    cur_text, new_text = text[:m.end()], text[m.end():]
+                    cur_text, new_text = text[: m.end()], text[m.end() :]
                     cur_ent, new_ent = [], []
                     for ent in entities:
                         if ent.offset < m.end():
                             if ent.offset + ent.length > m.end():
                                 cur_ent.append(update(ent, length=m.end() - ent.offset))
-                                new_ent.append(update(ent, offset=0, length=ent.offset + ent.length - m.end()))
+                                new_ent.append(
+                                    update(
+                                        ent,
+                                        offset=0,
+                                        length=ent.offset + ent.length - m.end(),
+                                    )
+                                )
                             else:
                                 cur_ent.append(ent)
                         else:
@@ -1517,6 +1602,7 @@ class AsyncClassWrapper:
 
     def __getattr__(self, item):
         w = getattr(self.wrapped, item)
+
         async def wrapper(*args, **kwargs):
             val = w(*args, **kwargs)
             return await val if inspect.isawaitable(val) else val
@@ -1537,7 +1623,9 @@ def stripped_photo_to_jpg(stripped):
     if len(stripped) < 3 or stripped[0] != 1:
         return stripped
 
-    header = bytearray(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00(\x1c\x1e#\x1e\x19(#!#-+(0<dA<77<{X]Id\x91\x80\x99\x96\x8f\x80\x8c\x8a\xa0\xb4\xe6\xc3\xa0\xaa\xda\xad\x8a\x8c\xc8\xff\xcb\xda\xee\xf5\xff\xff\xff\x9b\xc1\xff\xff\xff\xfa\xff\xe6\xfd\xff\xf8\xff\xdb\x00C\x01+--<5<vAAv\xf8\xa5\x8c\xa5\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xff\xc0\x00\x11\x08\x00\x00\x00\x00\x03\x01"\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\xff\xc4\x00\xb5\x10\x00\x02\x01\x03\x03\x02\x04\x03\x05\x05\x04\x04\x00\x00\x01}\x01\x02\x03\x00\x04\x11\x05\x12!1A\x06\x13Qa\x07"q\x142\x81\x91\xa1\x08#B\xb1\xc1\x15R\xd1\xf0$3br\x82\t\n\x16\x17\x18\x19\x1a%&\'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xff\xc4\x00\x1f\x01\x00\x03\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\xff\xc4\x00\xb5\x11\x00\x02\x01\x02\x04\x04\x03\x04\x07\x05\x04\x04\x00\x01\x02w\x00\x01\x02\x03\x11\x04\x05!1\x06\x12AQ\x07aq\x13"2\x81\x08\x14B\x91\xa1\xb1\xc1\t#3R\xf0\x15br\xd1\n\x16$4\xe1%\xf1\x17\x18\x19\x1a&\'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00?\x00')
+    header = bytearray(
+        b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00(\x1c\x1e#\x1e\x19(#!#-+(0<dA<77<{X]Id\x91\x80\x99\x96\x8f\x80\x8c\x8a\xa0\xb4\xe6\xc3\xa0\xaa\xda\xad\x8a\x8c\xc8\xff\xcb\xda\xee\xf5\xff\xff\xff\x9b\xc1\xff\xff\xff\xfa\xff\xe6\xfd\xff\xf8\xff\xdb\x00C\x01+--<5<vAAv\xf8\xa5\x8c\xa5\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xf8\xff\xc0\x00\x11\x08\x00\x00\x00\x00\x03\x01"\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\xff\xc4\x00\xb5\x10\x00\x02\x01\x03\x03\x02\x04\x03\x05\x05\x04\x04\x00\x00\x01}\x01\x02\x03\x00\x04\x11\x05\x12!1A\x06\x13Qa\x07"q\x142\x81\x91\xa1\x08#B\xb1\xc1\x15R\xd1\xf0$3br\x82\t\n\x16\x17\x18\x19\x1a%&\'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xff\xc4\x00\x1f\x01\x00\x03\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\xff\xc4\x00\xb5\x11\x00\x02\x01\x02\x04\x04\x03\x04\x07\x05\x04\x04\x00\x01\x02w\x00\x01\x02\x03\x11\x04\x05!1\x06\x12AQ\x07aq\x13"2\x81\x08\x14B\x91\xa1\xb1\xc1\t#3R\xf0\x15br\xd1\n\x16$4\xe1%\xf1\x17\x18\x19\x1a&\'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00?\x00'
+    )
     footer = b"\xff\xd9"
     header[164] = stripped[1]
     header[166] = stripped[2]
@@ -1562,7 +1650,7 @@ def _photo_size_byte_count(size):
         return None
 
 
-def convert_reaction( # skip merge
+def convert_reaction(  # skip merge
     reaction: "typing.Optional[hints.Reaction]" = None,  # type: ignore
 ) -> "typing.Optional[typing.Union[typing.List[types.ReactionEmoji], typing.List[types.ReactionCustomEmoji]]]":  # type: ignore
     """
@@ -1590,8 +1678,10 @@ def convert_reaction( # skip merge
     return reaction
 
 
-def get_input_reply_to( # skip merge
-    entity: typing.Optional[typing.Union[int, types.InputUser, types.InputChannel]] = None,
+def get_input_reply_to(  # skip merge
+    entity: typing.Optional[
+        typing.Union[int, types.InputUser, types.InputChannel]
+    ] = None,
     reply_to: typing.Optional[typing.Union[int, types.Message, types.StoryItem]] = None,
     top_msg_id: typing.Optional[int] = None,
     stories: bool = False,
@@ -1620,8 +1710,8 @@ def get_input_reply_to( # skip merge
     return reply_to or None
 
 
-def get_input_story_id( # skip merge
-    story: 'hints.StoryItemLike',
+def get_input_story_id(  # skip merge
+    story: "hints.StoryItemLike",
 ) -> int:
     """
     Get the input story ID from the given parameters.

@@ -1,10 +1,12 @@
 """
 Helper module around the system's libssl library if available for IGE mode.
 """
+
 import ctypes
 import ctypes.util
 import platform
 import sys
+
 try:
     import ctypes.macholib.dyld
 except ImportError:
@@ -16,22 +18,22 @@ __log__ = logging.getLogger(__name__)
 
 
 def _find_ssl_lib():
-    lib = ctypes.util.find_library('ssl')
+    lib = ctypes.util.find_library("ssl")
     # macOS 10.15 segfaults on  unversioned crypto libraries.
     # We therefore pin the current stable version here
     # Credit for fix goes to Sarah Harvey (@worldwise001)
     # https://www.shh.sh/2020/01/04/python-abort-trap-6.html
-    if sys.platform == 'darwin':
+    if sys.platform == "darwin":
         release, _version_info, _machine = platform.mac_ver()
-        ver, major, *_ = release.split('.')
+        ver, major, *_ = release.split(".")
         # macOS 10.14 "mojave" is the last known major release
         # to support unversioned libssl.dylib. Anything above
         # needs specific versions
         if int(ver) > 10 or int(ver) == 10 and int(major) > 14:
             lib = (
-                ctypes.util.find_library('libssl.46') or
-                ctypes.util.find_library('libssl.44') or
-                ctypes.util.find_library('libssl.42')
+                ctypes.util.find_library("libssl.46")
+                or ctypes.util.find_library("libssl.44")
+                or ctypes.util.find_library("libssl.42")
             )
     if not lib:
         raise OSError('no library called "ssl" found')
@@ -76,7 +78,7 @@ try:
 except OSError as e:
     # See https://github.com/LonamiWebs/Telethon/issues/1167
     # Sometimes `find_library` returns improper filenames.
-    __log__.info('Failed to load SSL library: %s (%s)', type(e), e)
+    __log__.info("Failed to load SSL library: %s (%s)", type(e), e)
     _libssl = None
 
 if not _libssl:
@@ -90,9 +92,10 @@ else:
 
     class AES_KEY(ctypes.Structure):
         """Helper class representing an AES key"""
+
         _fields_ = [
-            ('rd_key', ctypes.c_uint32 * (4 * (AES_MAXNR + 1))),
-            ('rounds', ctypes.c_uint),
+            ("rd_key", ctypes.c_uint32 * (4 * (AES_MAXNR + 1))),
+            ("rounds", ctypes.c_uint),
         ]
 
     def decrypt_ige(cipher_text, key, iv):
@@ -112,7 +115,7 @@ else:
             in_len,
             ctypes.byref(aes_key),
             ctypes.byref(iv),
-            AES_DECRYPT
+            AES_DECRYPT,
         )
 
         return bytes(out_ptr)
@@ -134,7 +137,7 @@ else:
             in_len,
             ctypes.byref(aes_key),
             ctypes.byref(iv),
-            AES_ENCRYPT
+            AES_ENCRYPT,
         )
 
         return bytes(out_ptr)

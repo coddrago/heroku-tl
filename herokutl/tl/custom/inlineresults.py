@@ -44,9 +44,12 @@ class InlineResults(list):
             switch to a private conversation with the bot using
             the text in this object.
     """
+
     def __init__(self, client, original, *, entity=None):
-        super().__init__(InlineResult(client, x, original.query_id, entity=entity)
-                         for x in original.results)
+        super().__init__(
+            InlineResult(client, x, original.query_id, entity=entity)
+            for x in original.results
+        )
 
         self.result = original
         self.query_id = original.query_id
@@ -65,16 +68,18 @@ class InlineResults(list):
         return time.time() < self._valid_until
 
     def _to_str(self, item_function):
-        return ('[{}, query_id={}, cache_time={}, users={}, gallery={}, '
-                'next_offset={}, switch_pm={}]'.format(
-            ', '.join(item_function(x) for x in self),
-            self.query_id,
-            self.cache_time,
-            self.users,
-            self.gallery,
-            self.next_offset,
-            self.switch_pm
-        ))
+        return (
+            "[{}, query_id={}, cache_time={}, users={}, gallery={}, "
+            "next_offset={}, switch_pm={}]".format(
+                ", ".join(item_function(x) for x in self),
+                self.query_id,
+                self.cache_time,
+                self.users,
+                self.gallery,
+                self.next_offset,
+                self.switch_pm,
+            )
+        )
 
     def __str__(self):
         return self._to_str(str)

@@ -1,6 +1,7 @@
 """
 This module holds a fast Factorization class.
 """
+
 from random import randint
 
 
@@ -8,6 +9,7 @@ class Factorization:
     """
     Simple module to factorize large numbers really quickly.
     """
+
     @classmethod
     def factorize(cls, pq):
         """

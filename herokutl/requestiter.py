@@ -26,12 +26,13 @@ class RequestIter(abc.ABC):
     be set to `True` if that's the case. Note that if this flag is set,
     `buffer` should be filled in reverse too.
     """
+
     def __init__(self, client, limit, *, reverse=False, wait_time=None, **kwargs):
         self.client = client
         self.reverse = reverse
         self.wait_time = wait_time
         self.kwargs = kwargs
-        self.limit = max(float('inf') if limit is None else limit, 0)
+        self.limit = max(float("inf") if limit is None else limit, 0)
         self.left = self.limit
         self.buffer = None
         self.index = 0
@@ -64,9 +65,7 @@ class RequestIter(abc.ABC):
         if self.index == len(self.buffer):
             # asyncio will handle times <= 0 to sleep 0 seconds
             if self.wait_time:
-                await asyncio.sleep(
-                    self.wait_time - (time.time() - self.last_load)
-                )
+                await asyncio.sleep(self.wait_time - (time.time() - self.last_load))
                 self.last_load = time.time()
 
             self.index = 0

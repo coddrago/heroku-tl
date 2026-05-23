@@ -21,12 +21,14 @@ async def _into_id_set(client, chats):
             if chat < 0:
                 result.add(chat)  # Explicitly marked IDs are negative
             else:
-                result.update({  # Support all valid types of peers
-                    utils.get_peer_id(types.PeerUser(chat)),
-                    utils.get_peer_id(types.PeerChat(chat)),
-                    utils.get_peer_id(types.PeerChannel(chat)),
-                })
-        elif isinstance(chat, TLObject) and chat.SUBCLASS_OF_ID == 0x2d45687:
+                result.update(
+                    {  # Support all valid types of peers
+                        utils.get_peer_id(types.PeerUser(chat)),
+                        utils.get_peer_id(types.PeerChat(chat)),
+                        utils.get_peer_id(types.PeerChannel(chat)),
+                    }
+                )
+        elif isinstance(chat, TLObject) and chat.SUBCLASS_OF_ID == 0x2D45687:
             # 0x2d45687 == crc32(b'Peer')
             result.add(utils.get_peer_id(chat))
         else:
@@ -65,6 +67,7 @@ class EventBuilder(abc.ABC):
                 async def handler(event):
                     pass  # code here
     """
+
     def __init__(self, chats=None, *, blacklist_chats=False, func=None):
         self.chats = chats
         self.blacklist_chats = bool(blacklist_chats)
@@ -138,7 +141,8 @@ class EventCommon(ChatGetter, abc.ABC):
     In addition, you can access the `original_update`
     field which contains the original :tl:`Update`.
     """
-    _event_name = 'Event'
+
+    _event_name = "Event"
 
     def __init__(self, chat_peer=None, msg_id=None, broadcast=None):
         super().__init__(chat_peer, broadcast=broadcast)
@@ -154,7 +158,8 @@ class EventCommon(ChatGetter, abc.ABC):
         self._client = client
         if self._chat_peer:
             self._chat, self._input_chat = utils._get_entity_pair(
-                self.chat_id, self._entities, client._mb_entity_cache)
+                self.chat_id, self._entities, client._mb_entity_cache
+            )
         else:
             self._chat = self._input_chat = None
 
@@ -172,15 +177,15 @@ class EventCommon(ChatGetter, abc.ABC):
         return TLObject.pretty_format(self.to_dict(), indent=0)
 
     def to_dict(self):
-        d = {k: v for k, v in self.__dict__.items() if k[0] != '_'}
-        d['_'] = self._event_name
+        d = {k: v for k, v in self.__dict__.items() if k[0] != "_"}
+        d["_"] = self._event_name
         return d
 
 
 def name_inner_event(cls):
     """Decorator to rename cls.Event 'Event' as 'cls.Event'"""
-    if hasattr(cls, 'Event'):
-        cls.Event._event_name = '{}.Event'.format(cls.__name__)
+    if hasattr(cls, "Event"):
+        cls.Event._event_name = "{}.Event".format(cls.__name__)
     else:
-        warnings.warn('Class {} does not have a inner Event'.format(cls))
+        warnings.warn("Class {} does not have a inner Event".format(cls))
     return cls

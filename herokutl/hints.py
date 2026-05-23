@@ -8,16 +8,12 @@ Phone = str
 Username = str
 PeerID = int
 Entity = typing.Union[types.User, types.Chat, types.Channel]
-FullEntity = typing.Union[types.UserFull, types.messages.ChatFull, types.ChatFull, types.ChannelFull]
+FullEntity = typing.Union[
+    types.UserFull, types.messages.ChatFull, types.ChatFull, types.ChannelFull
+]
 
 EntityLike = typing.Union[
-    Phone,
-    Username,
-    PeerID,
-    types.TypePeer,
-    types.TypeInputPeer,
-    Entity,
-    FullEntity
+    Phone, Username, PeerID, types.TypePeer, types.TypeInputPeer, Entity, FullEntity
 ]
 EntitiesLike = typing.Union[EntityLike, typing.Sequence[EntityLike]]
 
@@ -26,12 +22,14 @@ MarkupLike = typing.Union[
     types.TypeReplyMarkup,
     ButtonLike,
     typing.Sequence[ButtonLike],
-    typing.Sequence[typing.Sequence[ButtonLike]]
+    typing.Sequence[typing.Sequence[ButtonLike]],
 ]
 
 TotalList = helpers.TotalList
 
-DateLike = typing.Optional[typing.Union[float, datetime.datetime, datetime.date, datetime.timedelta]]
+DateLike = typing.Optional[
+    typing.Union[float, datetime.datetime, datetime.date, datetime.timedelta]
+]
 
 LocalPath = str
 ExternalUrl = str
@@ -49,22 +47,15 @@ FileLike = typing.Union[
     types.TypePhoto,
     types.TypeInputPhoto,
     types.TypeDocument,
-    types.TypeInputDocument
+    types.TypeInputDocument,
 ]
 
 # Can't use `typing.Type` in Python 3.5.2
 # See https://github.com/python/typing/issues/266
 try:
-    OutFileLike = typing.Union[
-        str,
-        typing.Type[bytes],
-        typing.BinaryIO
-    ]
+    OutFileLike = typing.Union[str, typing.Type[bytes], typing.BinaryIO]
 except TypeError:
-    OutFileLike = typing.Union[
-        str,
-        typing.BinaryIO
-    ]
+    OutFileLike = typing.Union[str, typing.BinaryIO]
 
 MessageLike = typing.Union[str, types.Message]
 MessageIDLike = typing.Union[int, types.Message, types.TypeInputMessage]

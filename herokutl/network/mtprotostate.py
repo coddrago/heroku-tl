@@ -13,7 +13,6 @@ from ..tl.functions import InvokeAfterMsgRequest
 from ..tl.core.gzippacked import GzipPacked
 from ..tl.types import BadServerSalt, BadMsgNotification
 
-
 # N is not  specified in https://core.telegram.org/mtproto/security_guidelines#checking-msg-id, but 500 is reasonable
 MAX_RECENT_MSG_IDS = 500
 
@@ -28,12 +27,12 @@ class _OpaqueRequest(TLRequest):
     """
     Wraps a serialized request into a type that can be serialized again.
     """
+
     def __init__(self, data: bytes):
         self.data = data
 
     def _bytes(self):
         return self.data
-
 
 
 class MTProtoState:
@@ -59,6 +58,7 @@ class MTProtoState:
     many methods that would be needed to make it convenient to use for the
     authentication process, at which point the `MTProtoPlainSender` is better.
     """
+
     def __init__(self, auth_key, loggers):
         self.auth_key = auth_key
         self._log = loggers[__name__]
@@ -76,7 +76,7 @@ class MTProtoState:
         Resets the state.
         """
         # Session IDs can be random on every connection
-        self.id = struct.unpack('q', os.urandom(8))[0]
+        self.id = struct.unpack("q", os.urandom(8))[0]
         self._sequence = 0
         self._last_msg_id = 0
         self._recent_remote_ids.clear()
@@ -98,16 +98,15 @@ class MTProtoState:
         https://core.telegram.org/mtproto/description#defining-aes-key-and-initialization-vector
         """
         x = 0 if client else 8
-        sha256a = sha256(msg_key + auth_key[x: x + 36]).digest()
-        sha256b = sha256(auth_key[x + 40:x + 76] + msg_key).digest()
+        sha256a = sha256(msg_key + auth_key[x : x + 36]).digest()
+        sha256b = sha256(auth_key[x + 40 : x + 76] + msg_key).digest()
 
         aes_key = sha256a[:8] + sha256b[8:24] + sha256a[24:32]
         aes_iv = sha256b[:8] + sha256a[8:24] + sha256b[24:32]
 
         return aes_key, aes_iv
 
-    def write_data_as_message(self, buffer, data, content_related,
-                              *, after_id=None):
+    def write_data_as_message(self, buffer, data, content_related, *, after_id=None):
         """
         Writes a message containing the given data into buffer.
 
@@ -120,10 +119,12 @@ class MTProtoState:
         else:
             # The `RequestState` stores `bytes(request)`, not the request itself.
             # `invokeAfterMsg` wants a `TLRequest` though, hence the wrapping.
-            body = GzipPacked.gzip_if_smaller(content_related,
-                bytes(InvokeAfterMsgRequest(after_id, _OpaqueRequest(data))))
+            body = GzipPacked.gzip_if_smaller(
+                content_related,
+                bytes(InvokeAfterMsgRequest(after_id, _OpaqueRequest(data))),
+            )
 
-        buffer.write(struct.pack('<qii', msg_id, seq_no, len(body)))
+        buffer.write(struct.pack("<qii", msg_id, seq_no, len(body)))
         buffer.write(body)
         return msg_id
 
@@ -132,35 +133,37 @@ class MTProtoState:
         Encrypts the given message data using the current authorization key
         following MTProto 2.0 guidelines core.telegram.org/mtproto/description.
         """
-        data = struct.pack('<qq', self.salt, self.id) + data
+        data = struct.pack("<qq", self.salt, self.id) + data
         padding = os.urandom(-(len(data) + 12) % 16 + 12)
 
         # Being substr(what, offset, length); x = 0 for client
         # "msg_key_large = SHA256(substr(auth_key, 88+x, 32) + pt + padding)"
         msg_key_large = sha256(
-            self.auth_key.key[88:88 + 32] + data + padding).digest()
+            self.auth_key.key[88 : 88 + 32] + data + padding
+        ).digest()
 
         # "msg_key = substr (msg_key_large, 8, 16)"
         msg_key = msg_key_large[8:24]
         aes_key, aes_iv = self._calc_key(self.auth_key.key, msg_key, True)
 
-        key_id = struct.pack('<Q', self.auth_key.key_id)
-        return (key_id + msg_key +
-                AES.encrypt_ige(data + padding, aes_key, aes_iv))
+        key_id = struct.pack("<Q", self.auth_key.key_id)
+        return key_id + msg_key + AES.encrypt_ige(data + padding, aes_key, aes_iv)
 
     def decrypt_message_data(self, body):
         """
         Inverse of `encrypt_message_data` for incoming server messages.
         """
-        now = time.time()  # get the time as early as possible, even if other checks make it go unused
+        now = (
+            time.time()
+        )  # get the time as early as possible, even if other checks make it go unused
 
         if len(body) < 8:
             raise InvalidBufferError(body)
 
         # TODO Check salt, session_id and sequence_number
-        key_id = struct.unpack('<Q', body[:8])[0]
+        key_id = struct.unpack("<Q", body[:8])[0]
         if key_id != self.auth_key.key_id:
-            raise SecurityError('Server replied with an invalid auth key')
+            raise SecurityError("Server replied with an invalid auth key")
 
         msg_key = body[8:24]
         aes_key, aes_iv = self._calc_key(self.auth_key.key, msg_key, False)
@@ -168,24 +171,30 @@ class MTProtoState:
 
         # https://core.telegram.org/mtproto/security_guidelines
         # Sections "checking sha256 hash" and "message length"
-        our_key = sha256(self.auth_key.key[96:96 + 32] + body)
+        our_key = sha256(self.auth_key.key[96 : 96 + 32] + body)
         if msg_key != our_key.digest()[8:24]:
-            raise SecurityError(
-                "Received msg_key doesn't match with expected one")
+            raise SecurityError("Received msg_key doesn't match with expected one")
 
         reader = BinaryReader(body)
         reader.read_long()  # remote_salt
         if reader.read_long() != self.id:
-            raise SecurityError('Server replied with a wrong session ID (see FAQ for details)')
+            raise SecurityError(
+                "Server replied with a wrong session ID (see FAQ for details)"
+            )
 
         remote_msg_id = reader.read_long()
 
         if remote_msg_id % 2 != 1:
-            raise SecurityError('Server sent an even msg_id')
+            raise SecurityError("Server sent an even msg_id")
 
         # Only perform the (somewhat expensive) check of duplicate if we did receive a lower ID
-        if remote_msg_id <= self._highest_remote_id and remote_msg_id in self._recent_remote_ids:
-            self._log.warning('Server resent the older message %d, ignoring', remote_msg_id)
+        if (
+            remote_msg_id <= self._highest_remote_id
+            and remote_msg_id in self._recent_remote_ids
+        ):
+            self._log.warning(
+                "Server resent the older message %d, ignoring", remote_msg_id
+            )
             self._count_ignored()
             return None
 
@@ -203,7 +212,10 @@ class MTProtoState:
         # messages to change server_salt and notifications about invalid time on the client."
         #
         # This means we skip the time check for certain types of messages.
-        if obj.CONSTRUCTOR_ID in (BadServerSalt.CONSTRUCTOR_ID, BadMsgNotification.CONSTRUCTOR_ID):
+        if obj.CONSTRUCTOR_ID in (
+            BadServerSalt.CONSTRUCTOR_ID,
+            BadMsgNotification.CONSTRUCTOR_ID,
+        ):
             if not self._highest_remote_id and not self.time_offset:
                 # If the first message we receive is a bad notification, take this opportunity
                 # to adjust the time offset. Assume it will remain stable afterwards. Updating
@@ -214,12 +226,18 @@ class MTProtoState:
             time_delta = (now + self.time_offset) - remote_msg_time
 
             if time_delta > MSG_TOO_OLD_DELTA:
-                self._log.warning('Server sent a very old message with ID %d, ignoring (see FAQ for details)', remote_msg_id)
+                self._log.warning(
+                    "Server sent a very old message with ID %d, ignoring (see FAQ for details)",
+                    remote_msg_id,
+                )
                 self._count_ignored()
                 return None
 
             if -time_delta > MSG_TOO_NEW_DELTA:
-                self._log.warning('Server sent a very new message with ID %d, ignoring (see FAQ for details)', remote_msg_id)
+                self._log.warning(
+                    "Server sent a very new message with ID %d, ignoring (see FAQ for details)",
+                    remote_msg_id,
+                )
                 self._count_ignored()
                 return None
 
@@ -234,7 +252,7 @@ class MTProtoState:
         # but this should not happen unless there's something else wrong.
         self._ignore_count += 1
         if self._ignore_count >= MAX_CONSECUTIVE_IGNORED:
-            raise SecurityError('Too many messages had to be ignored consecutively')
+            raise SecurityError("Too many messages had to be ignored consecutively")
 
     def _get_new_msg_id(self):
         """
@@ -242,7 +260,7 @@ class MTProtoState:
         time (in ms) since epoch, applying a known time offset.
         """
         now = time.time() + self.time_offset
-        nanoseconds = int((now - int(now)) * 1e+9)
+        nanoseconds = int((now - int(now)) * 1e9)
         new_msg_id = (int(now) << 32) | (nanoseconds << 2)
 
         if self._last_msg_id >= new_msg_id:
@@ -266,8 +284,11 @@ class MTProtoState:
         if self.time_offset != old:
             self._last_msg_id = 0
             self._log.debug(
-                'Updated time offset (old offset %d, bad %d, good %d, new %d)',
-                old, bad, correct_msg_id, self.time_offset
+                "Updated time offset (old offset %d, bad %d, good %d, new %d)",
+                old,
+                bad,
+                correct_msg_id,
+                self.time_offset,
             )
 
         return self.time_offset

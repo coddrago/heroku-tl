@@ -16,15 +16,15 @@ def make_link_node(rawtext, app, name, options):
         if not base:
             raise AttributeError
     except AttributeError as e:
-        raise ValueError('tl_ref_url config value is not set') from e
+        raise ValueError("tl_ref_url config value is not set") from e
 
-    if base[-1] != '/':
-        base += '/'
+    if base[-1] != "/":
+        base += "/"
 
     set_classes(options)
-    node = nodes.reference(rawtext, utils.unescape(name),
-                           refuri='{}?q={}'.format(base, name),
-                           **options)
+    node = nodes.reference(
+        rawtext, utils.unescape(name), refuri="{}?q={}".format(base, name), **options
+    )
     return node
 
 
@@ -62,6 +62,6 @@ def setup(app):
 
     :param app: Sphinx application context.
     """
-    app.add_role('tl', tl_role)
-    app.add_config_value('tl_ref_url', None, 'env')
+    app.add_role("tl", tl_role)
+    app.add_config_value("tl_ref_url", None, "env")
     return

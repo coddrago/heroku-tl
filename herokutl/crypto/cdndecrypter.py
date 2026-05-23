@@ -1,6 +1,7 @@
 """
 This module holds the CdnDecrypter utility class.
 """
+
 from hashlib import sha256
 
 from ..tl.functions.upload import GetCdnFileRequest, ReuploadCdnFileRequest
@@ -15,6 +16,7 @@ class CdnDecrypter:
     both prepare the redirect, decrypt the file as it downloads, and
     ensure the file hasn't been tampered. https://core.telegram.org/cdn
     """
+
     def __init__(self, cdn_client, file_token, cdn_aes, cdn_file_hashes):
         """
         Initializes the CDN decrypter.
@@ -42,27 +44,30 @@ class CdnDecrypter:
         cdn_aes = AESModeCTR(
             key=cdn_redirect.encryption_key,
             # 12 first bytes of the IV..4 bytes of the offset (0, big endian)
-            iv=cdn_redirect.encryption_iv[:12] + bytes(4)
+            iv=cdn_redirect.encryption_iv[:12] + bytes(4),
         )
 
         # We assume that cdn_redirect.cdn_file_hashes are ordered by offset,
         # and that there will be enough of these to retrieve the whole file.
         decrypter = CdnDecrypter(
-            cdn_client, cdn_redirect.file_token,
-            cdn_aes, cdn_redirect.cdn_file_hashes
+            cdn_client, cdn_redirect.file_token, cdn_aes, cdn_redirect.cdn_file_hashes
         )
 
-        cdn_file = await cdn_client(GetCdnFileRequest(
-            file_token=cdn_redirect.file_token,
-            offset=cdn_redirect.cdn_file_hashes[0].offset,
-            limit=cdn_redirect.cdn_file_hashes[0].limit
-        ))
+        cdn_file = await cdn_client(
+            GetCdnFileRequest(
+                file_token=cdn_redirect.file_token,
+                offset=cdn_redirect.cdn_file_hashes[0].offset,
+                limit=cdn_redirect.cdn_file_hashes[0].limit,
+            )
+        )
         if isinstance(cdn_file, CdnFileReuploadNeeded):
             # We need to use the original client here
-            await client(ReuploadCdnFileRequest(
-                file_token=cdn_redirect.file_token,
-                request_token=cdn_file.request_token
-            ))
+            await client(
+                ReuploadCdnFileRequest(
+                    file_token=cdn_redirect.file_token,
+                    request_token=cdn_file.request_token,
+                )
+            )
 
             # We want to always return a valid upload.CdnFile
             cdn_file = decrypter.get_file()
@@ -82,9 +87,9 @@ class CdnDecrypter:
         """
         if self.cdn_file_hashes:
             cdn_hash = self.cdn_file_hashes.pop(0)
-            cdn_file = self.client(GetCdnFileRequest(
-                self.file_token, cdn_hash.offset, cdn_hash.limit
-            ))
+            cdn_file = self.client(
+                GetCdnFileRequest(self.file_token, cdn_hash.offset, cdn_hash.limit)
+            )
             cdn_file.bytes = self.cdn_aes.encrypt(cdn_file.bytes)
             self.check(cdn_file.bytes, cdn_hash)
         else:

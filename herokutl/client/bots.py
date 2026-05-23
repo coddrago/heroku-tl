@@ -9,13 +9,14 @@ if typing.TYPE_CHECKING:
 
 class BotMethods:
     async def inline_query(
-            self: 'TelegramClient',
-            bot: 'hints.EntityLike',
-            query: str,
-            *,
-            entity: 'hints.EntityLike' = None,
-            offset: str = None,
-            geo_point: 'types.GeoPoint' = None) -> custom.InlineResults:
+        self: "TelegramClient",
+        bot: "hints.EntityLike",
+        query: str,
+        *,
+        entity: "hints.EntityLike" = None,
+        offset: str = None,
+        geo_point: "types.GeoPoint" = None
+    ) -> custom.InlineResults:
         """
         Makes an inline query to the specified bot (``@vote New Poll``).
 
@@ -61,12 +62,14 @@ class BotMethods:
         else:
             peer = types.InputPeerEmpty()
 
-        result = await self(functions.messages.GetInlineBotResultsRequest(
-            bot=bot,
-            peer=peer,
-            query=query,
-            offset=offset or '',
-            geo_point=geo_point
-        ))
+        result = await self(
+            functions.messages.GetInlineBotResultsRequest(
+                bot=bot,
+                peer=peer,
+                query=query,
+                offset=offset or "",
+                geo_point=geo_point,
+            )
+        )
 
         return custom.InlineResults(self, result, entity=peer if entity else None)

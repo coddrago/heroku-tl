@@ -9,6 +9,7 @@ class SenderGetter(abc.ABC):
     and `sender_id` properties and `get_sender` and `get_input_sender`
     methods.
     """
+
     def __init__(self, sender_id=None, *, sender=None, input_sender=None):
         self._sender_id = sender_id
         self._sender = sender
@@ -46,14 +47,14 @@ class SenderGetter(abc.ABC):
         # in which case we want to force fetch the entire thing because
         # the user explicitly called a method. If the user is okay with
         # cached information, they may use the property instead.
-        if (self._sender is None or getattr(self._sender, 'min', None)) \
-                and await self.get_input_sender():
+        if (
+            self._sender is None or getattr(self._sender, "min", None)
+        ) and await self.get_input_sender():
             # self.get_input_sender may refresh in which case the sender may no longer be min
             # However it could still incur a cost so the cheap check is done twice instead.
-            if self._sender is None or getattr(self._sender, 'min', None):
+            if self._sender is None or getattr(self._sender, "min", None):
                 try:
-                    self._sender =\
-                        await self._client.get_entity(self._input_sender)
+                    self._sender = await self._client.get_entity(self._input_sender)
                 except ValueError:
                     await self._refetch_sender()
         return self._sender
@@ -72,7 +73,8 @@ class SenderGetter(abc.ABC):
         if self._input_sender is None and self._sender_id and self._client:
             try:
                 self._input_sender = self._client._mb_entity_cache.get(
-                        utils.resolve_id(self._sender_id)[0])._as_input_peer()
+                    utils.resolve_id(self._sender_id)[0]
+                )._as_input_peer()
             except AttributeError:
                 pass
         return self._input_sender

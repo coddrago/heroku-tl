@@ -3,7 +3,7 @@ from ..tlobject import TLObject
 
 
 class MessageContainer(TLObject):
-    CONSTRUCTOR_ID = 0x73f1f8dc
+    CONSTRUCTOR_ID = 0x73F1F8DC
 
     # Maximum size in bytes for the inner payload of the container.
     # Telegram will close the connection if the payload is bigger.
@@ -25,11 +25,12 @@ class MessageContainer(TLObject):
 
     def to_dict(self):
         return {
-            '_': 'MessageContainer',
-            'messages':
-                [] if self.messages is None else [
-                    None if x is None else x.to_dict() for x in self.messages
-                ],
+            "_": "MessageContainer",
+            "messages": (
+                []
+                if self.messages is None
+                else [None if x is None else x.to_dict() for x in self.messages]
+            ),
         }
 
     @classmethod

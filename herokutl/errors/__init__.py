@@ -2,12 +2,20 @@
 This module holds all the base and automatically generated errors that the
 Telegram API has. See telethon_generator/errors.json for more.
 """
+
 import re
 
 from .common import (
-    ReadCancelledError, TypeNotFoundError, InvalidChecksumError,
-    InvalidBufferError, AuthKeyNotFound, SecurityError, CdnFileTamperedError,
-    AlreadyInConversationError, BadMessageError, MultiError
+    ReadCancelledError,
+    TypeNotFoundError,
+    InvalidChecksumError,
+    InvalidBufferError,
+    AuthKeyNotFound,
+    SecurityError,
+    CdnFileTamperedError,
+    AlreadyInConversationError,
+    BadMessageError,
+    MultiError,
 )
 
 # This imports the base errors too, as they're imported there
@@ -42,5 +50,6 @@ def rpc_message_to_error(rpc_error, request):
     # We treat them as if they were positive, so -500 will be treated
     # as a `ServerError`, etc.
     cls = base_errors.get(abs(rpc_error.error_code), RPCError)
-    return cls(request=request, message=rpc_error.error_message,
-               code=rpc_error.error_code)
+    return cls(
+        request=request, message=rpc_error.error_message, code=rpc_error.error_code
+    )

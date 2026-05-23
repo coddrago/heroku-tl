@@ -21,12 +21,20 @@ def _dialog_message_key(peer, message_id):
     and the peer ID is required to distinguish between them. But it is not
     necessary in small group chats and private chats.
     """
-    return (peer.channel_id if isinstance(peer, types.PeerChannel) else None), message_id
+    return (
+        peer.channel_id if isinstance(peer, types.PeerChannel) else None
+    ), message_id
 
 
 class _DialogsIter(RequestIter):
     async def _init(
-            self, offset_date, offset_id, offset_peer, ignore_pinned, ignore_migrated, folder
+        self,
+        offset_date,
+        offset_id,
+        offset_peer,
+        ignore_pinned,
+        ignore_migrated,
+        folder,
     ):
         self.request = functions.messages.GetDialogsRequest(
             offset_date=offset_date,
@@ -35,13 +43,13 @@ class _DialogsIter(RequestIter):
             limit=1,
             hash=0,
             exclude_pinned=ignore_pinned,
-            folder_id=folder
+            folder_id=folder,
         )
 
         if self.limit <= 0:
             # Special case, get a single dialog and determine count
             dialogs = await self.client(self.request)
-            self.total = getattr(dialogs, 'count', len(dialogs.dialogs))
+            self.total = getattr(dialogs, "count", len(dialogs.dialogs))
             raise StopAsyncIteration
 
         self.seen = set()
@@ -52,11 +60,13 @@ class _DialogsIter(RequestIter):
         self.request.limit = min(self.left, _MAX_CHUNK_SIZE)
         r = await self.client(self.request)
 
-        self.total = getattr(r, 'count', len(r.dialogs))
+        self.total = getattr(r, "count", len(r.dialogs))
 
-        entities = {utils.get_peer_id(x): x
-                    for x in itertools.chain(r.users, r.chats)
-                    if not isinstance(x, (types.UserEmpty, types.ChatEmpty))}
+        entities = {
+            utils.get_peer_id(x): x
+            for x in itertools.chain(r.users, r.chats)
+            if not isinstance(x, (types.UserEmpty, types.ChatEmpty))
+        }
 
         self.client._mb_entity_cache.extend(r.users, r.chats)
 
@@ -69,7 +79,7 @@ class _DialogsIter(RequestIter):
             # We check the offset date here because Telegram may ignore it
             message = messages.get(_dialog_message_key(d.peer, d.top_message))
             if self.offset_date:
-                date = getattr(message, 'date', None)
+                date = getattr(message, "date", None)
                 if not date or date.timestamp() > self.offset_date.timestamp():
                     continue
 
@@ -85,14 +95,20 @@ class _DialogsIter(RequestIter):
                 cd = custom.Dialog(self.client, d, entities, message)
                 if cd.dialog.pts:
                     self.client._message_box.try_set_channel_state(
-                        utils.get_peer_id(d.peer, add_mark=False), cd.dialog.pts)
+                        utils.get_peer_id(d.peer, add_mark=False), cd.dialog.pts
+                    )
 
-                if not self.ignore_migrated or getattr(
-                        cd.entity, 'migrated_to', None) is None:
+                if (
+                    not self.ignore_migrated
+                    or getattr(cd.entity, "migrated_to", None) is None
+                ):
                     self.buffer.append(cd)
 
-        if not self.buffer or len(r.dialogs) < self.request.limit\
-                or not isinstance(r, types.messages.DialogsSlice):
+        if (
+            not self.buffer
+            or len(r.dialogs) < self.request.limit
+            or not isinstance(r, types.messages.DialogsSlice)
+        ):
             # Buffer being empty means all returned dialogs were skipped (due to offsets).
             # Less than we requested means we reached the end, or
             # we didn't get a DialogsSlice which means we got all.
@@ -102,10 +118,16 @@ class _DialogsIter(RequestIter):
         # Why? Because pinned dialogs will mess with the order
         # in this list. Instead, we find the last dialog which
         # has a message, and use it as an offset.
-        last_message = next(filter(None, (
-            messages.get(_dialog_message_key(d.peer, d.top_message))
-            for d in reversed(r.dialogs)
-        )), None)
+        last_message = next(
+            filter(
+                None,
+                (
+                    messages.get(_dialog_message_key(d.peer, d.top_message))
+                    for d in reversed(r.dialogs)
+                ),
+            ),
+            None,
+        )
 
         self.request.exclude_pinned = True
         self.request.offset_id = last_message.id if last_message else 0
@@ -121,15 +143,15 @@ class _DraftsIter(RequestIter):
         else:
             peers = []
             for entity in entities:
-                peers.append(types.InputDialogPeer(
-                    await self.client.get_input_entity(entity)))
+                peers.append(
+                    types.InputDialogPeer(await self.client.get_input_entity(entity))
+                )
 
             r = await self.client(functions.messages.GetPeerDialogsRequest(peers))
             items = r.dialogs
 
         # TODO Maybe there should be a helper method for this?
-        entities = {utils.get_peer_id(x): x
-                    for x in itertools.chain(r.users, r.chats)}
+        entities = {utils.get_peer_id(x): x for x in itertools.chain(r.users, r.chats)}
 
         self.buffer.extend(
             custom.Draft(self.client, entities[utils.get_peer_id(d.peer)], d.draft)
@@ -145,16 +167,16 @@ class DialogMethods:
     # region Public methods
 
     def iter_dialogs(
-            self: 'TelegramClient',
-            limit: float = None,
-            *,
-            offset_date: 'hints.DateLike' = None,
-            offset_id: int = 0,
-            offset_peer: 'hints.EntityLike' = types.InputPeerEmpty(),
-            ignore_pinned: bool = False,
-            ignore_migrated: bool = False,
-            folder: int = None,
-            archived: bool = None
+        self: "TelegramClient",
+        limit: float = None,
+        *,
+        offset_date: "hints.DateLike" = None,
+        offset_id: int = 0,
+        offset_peer: "hints.EntityLike" = types.InputPeerEmpty(),
+        ignore_pinned: bool = False,
+        ignore_migrated: bool = False,
+        folder: int = None,
+        archived: bool = None
     ) -> _DialogsIter:
         """
         Iterator over the dialogs (open conversations/subscribed channels).
@@ -230,10 +252,10 @@ class DialogMethods:
             offset_peer=offset_peer,
             ignore_pinned=ignore_pinned,
             ignore_migrated=ignore_migrated,
-            folder=folder
+            folder=folder,
         )
 
-    async def get_dialogs(self: 'TelegramClient', *args, **kwargs) -> 'hints.TotalList':
+    async def get_dialogs(self: "TelegramClient", *args, **kwargs) -> "hints.TotalList":
         """
         Same as `iter_dialogs()`, but returns a
         `TotalList <telethon.helpers.TotalList>` instead.
@@ -262,8 +284,7 @@ class DialogMethods:
     get_dialogs.__signature__ = inspect.signature(iter_dialogs)
 
     def iter_drafts(
-            self: 'TelegramClient',
-            entity: 'hints.EntitiesLike' = None
+        self: "TelegramClient", entity: "hints.EntitiesLike" = None
     ) -> _DraftsIter:
         """
         Iterator over draft messages.
@@ -296,9 +317,8 @@ class DialogMethods:
         return _DraftsIter(self, None, entities=entity)
 
     async def get_drafts(
-            self: 'TelegramClient',
-            entity: 'hints.EntitiesLike' = None
-    ) -> 'hints.TotalList':
+        self: "TelegramClient", entity: "hints.EntitiesLike" = None
+    ) -> "hints.TotalList":
         """
         Same as `iter_drafts()`, but returns a list instead.
 
@@ -320,11 +340,11 @@ class DialogMethods:
             return items[0]
 
     async def edit_folder(
-            self: 'TelegramClient',
-            entity: 'hints.EntitiesLike' = None,
-            folder: typing.Union[int, typing.Sequence[int]] = None,
-            *,
-            unpack=None
+        self: "TelegramClient",
+        entity: "hints.EntitiesLike" = None,
+        folder: typing.Union[int, typing.Sequence[int]] = None,
+        *,
+        unpack=None
     ) -> types.Updates:
         """
         Edits the folder used by one or more dialogs to archive them.
@@ -377,36 +397,34 @@ class DialogMethods:
                 await client.edit_folder(unpack=1)
         """
         if (entity is None) == (unpack is None):
-            raise ValueError('You can only set either entities or unpack, not both')
+            raise ValueError("You can only set either entities or unpack, not both")
 
         if unpack is not None:
-            return await self(functions.folders.DeleteFolderRequest(
-                folder_id=unpack
-            ))
+            return await self(functions.folders.DeleteFolderRequest(folder_id=unpack))
 
         if not utils.is_list_like(entity):
             entities = [await self.get_input_entity(entity)]
         else:
-            entities = await asyncio.gather(
-                *(self.get_input_entity(x) for x in entity))
+            entities = await asyncio.gather(*(self.get_input_entity(x) for x in entity))
 
         if folder is None:
-            raise ValueError('You must specify a folder')
+            raise ValueError("You must specify a folder")
         elif not utils.is_list_like(folder):
             folder = [folder] * len(entities)
         elif len(entities) != len(folder):
-            raise ValueError('Number of folders does not match number of entities')
+            raise ValueError("Number of folders does not match number of entities")
 
-        return await self(functions.folders.EditPeerFoldersRequest([
-            types.InputFolderPeer(x, folder_id=y)
-            for x, y in zip(entities, folder)
-        ]))
+        return await self(
+            functions.folders.EditPeerFoldersRequest(
+                [
+                    types.InputFolderPeer(x, folder_id=y)
+                    for x, y in zip(entities, folder)
+                ]
+            )
+        )
 
     async def delete_dialog(
-            self: 'TelegramClient',
-            entity: 'hints.EntityLike',
-            *,
-            revoke: bool = False
+        self: "TelegramClient", entity: "hints.EntityLike", *, revoke: bool = False
     ):
         """
         Deletes a dialog (leaves a chat or channel).
@@ -459,9 +477,11 @@ class DialogMethods:
 
         if ty == helpers._EntityType.CHAT and not deactivated:
             try:
-                result = await self(functions.messages.DeleteChatUserRequest(
-                    entity.chat_id, types.InputUserSelf(), revoke_history=revoke
-                ))
+                result = await self(
+                    functions.messages.DeleteChatUserRequest(
+                        entity.chat_id, types.InputUserSelf(), revoke_history=revoke
+                    )
+                )
             except errors.PeerIdInvalidError:
                 # Happens if we didn't have the deactivated information
                 result = None
@@ -469,19 +489,22 @@ class DialogMethods:
             result = None
 
         if not await self.is_bot():
-            await self(functions.messages.DeleteHistoryRequest(entity, 0, revoke=revoke))
+            await self(
+                functions.messages.DeleteHistoryRequest(entity, 0, revoke=revoke)
+            )
 
         return result
 
     def conversation(
-            self: 'TelegramClient',
-            entity: 'hints.EntityLike',
-            *,
-            timeout: float = 60,
-            total_timeout: float = None,
-            max_messages: int = 100,
-            exclusive: bool = True,
-            replies_are_responses: bool = True) -> custom.Conversation:
+        self: "TelegramClient",
+        entity: "hints.EntityLike",
+        *,
+        timeout: float = 60,
+        total_timeout: float = None,
+        max_messages: int = 100,
+        exclusive: bool = True,
+        replies_are_responses: bool = True
+    ) -> custom.Conversation:
         """
         Creates a `Conversation <telethon.tl.custom.conversation.Conversation>`
         with the given entity.
@@ -603,8 +626,7 @@ class DialogMethods:
             total_timeout=total_timeout,
             max_messages=max_messages,
             exclusive=exclusive,
-            replies_are_responses=replies_are_responses
-
+            replies_are_responses=replies_are_responses,
         )
 
     # endregion

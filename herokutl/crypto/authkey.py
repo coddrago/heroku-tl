@@ -1,6 +1,7 @@
 """
 This module holds the AuthKey class.
 """
+
 import struct
 from hashlib import sha1
 
@@ -12,6 +13,7 @@ class AuthKey:
     Represents an authorization key, used to encrypt and decrypt
     messages sent to Telegram's data centers.
     """
+
     def __init__(self, data):
         """
         Initializes a new authorization key.
@@ -31,8 +33,11 @@ class AuthKey:
             return
 
         if isinstance(value, type(self)):
-            self._key, self.aux_hash, self.key_id = \
-                value._key, value.aux_hash, value.key_id
+            self._key, self.aux_hash, self.key_id = (
+                value._key,
+                value.aux_hash,
+                value.key_id,
+            )
             return
 
         self._key = value
@@ -50,11 +55,11 @@ class AuthKey:
         :param number: number to prepend before the hash.
         :return: the hash for the given new nonce.
         """
-        new_nonce = new_nonce.to_bytes(32, 'little', signed=True)
-        data = new_nonce + struct.pack('<BQ', number, self.aux_hash)
+        new_nonce = new_nonce.to_bytes(32, "little", signed=True)
+        data = new_nonce + struct.pack("<BQ", number, self.aux_hash)
 
         # Calculates the message key from the given data
-        return int.from_bytes(sha1(data).digest()[4:20], 'little', signed=True)
+        return int.from_bytes(sha1(data).digest()[4:20], "little", signed=True)
 
     def __bool__(self):
         return bool(self._key)

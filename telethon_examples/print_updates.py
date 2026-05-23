@@ -24,9 +24,9 @@ def get_env(name, message, cast=str):
 
 
 # Define some variables so the code reads easier
-session = os.environ.get('TG_SESSION', 'printer')
-api_id = get_env('TG_API_ID', 'Enter your API ID: ', int)
-api_hash = get_env('TG_API_HASH', 'Enter your API hash: ')
+session = os.environ.get("TG_SESSION", "printer")
+api_id = get_env("TG_API_ID", "Enter your API ID: ", int)
+api_hash = get_env("TG_API_HASH", "Enter your API hash: ")
 proxy = None  # https://github.com/romis2012/python-socks
 
 
@@ -41,5 +41,5 @@ with TelegramClient(session, api_id, api_hash, proxy=proxy) as client:
     client.add_event_handler(handler)
 
     # Run the client until Ctrl+C is pressed, or the client disconnects
-    print('(Press Ctrl+C to stop this)')
+    print("(Press Ctrl+C to stop this)")
     client.run_until_disconnected()

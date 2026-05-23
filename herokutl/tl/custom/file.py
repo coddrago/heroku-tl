@@ -15,6 +15,7 @@ class File:
 
     The original media is available through the ``media`` attribute.
     """
+
     def __init__(self, media):
         self.media = media
 
@@ -43,7 +44,7 @@ class File:
         """
         The file name of this document.
         """
-        return self._from_attr(types.DocumentAttributeFilename, 'file_name')
+        return self._from_attr(types.DocumentAttributeFilename, "file_name")
 
     @property
     def ext(self):
@@ -55,7 +56,7 @@ class File:
         """
         return (
             mimetypes.guess_extension(self.mime_type)
-            or os.path.splitext(self.name or '')[-1]
+            or os.path.splitext(self.name or "")[-1]
             or None
         )
 
@@ -65,7 +66,7 @@ class File:
         The mime-type of this file.
         """
         if isinstance(self.media, types.Photo):
-            return 'image/jpeg'
+            return "image/jpeg"
         elif isinstance(self.media, types.Document):
             return self.media.mime_type
 
@@ -75,10 +76,11 @@ class File:
         The width in pixels of this media if it's a photo or a video.
         """
         if isinstance(self.media, types.Photo):
-            return max(getattr(s, 'w', 0) for s in self.media.sizes)
+            return max(getattr(s, "w", 0) for s in self.media.sizes)
 
-        return self._from_attr((
-            types.DocumentAttributeImageSize, types.DocumentAttributeVideo), 'w')
+        return self._from_attr(
+            (types.DocumentAttributeImageSize, types.DocumentAttributeVideo), "w"
+        )
 
     @property
     def height(self):
@@ -86,46 +88,48 @@ class File:
         The height in pixels of this media if it's a photo or a video.
         """
         if isinstance(self.media, types.Photo):
-            return max(getattr(s, 'h', 0) for s in self.media.sizes)
+            return max(getattr(s, "h", 0) for s in self.media.sizes)
 
-        return self._from_attr((
-           types.DocumentAttributeImageSize, types.DocumentAttributeVideo), 'h')
+        return self._from_attr(
+            (types.DocumentAttributeImageSize, types.DocumentAttributeVideo), "h"
+        )
 
     @property
     def duration(self):
         """
         The duration in seconds of the audio or video.
         """
-        return self._from_attr((
-            types.DocumentAttributeAudio, types.DocumentAttributeVideo), 'duration')
+        return self._from_attr(
+            (types.DocumentAttributeAudio, types.DocumentAttributeVideo), "duration"
+        )
 
     @property
     def title(self):
         """
         The title of the song.
         """
-        return self._from_attr(types.DocumentAttributeAudio, 'title')
+        return self._from_attr(types.DocumentAttributeAudio, "title")
 
     @property
     def performer(self):
         """
         The performer of the song.
         """
-        return self._from_attr(types.DocumentAttributeAudio, 'performer')
+        return self._from_attr(types.DocumentAttributeAudio, "performer")
 
     @property
     def emoji(self):
         """
         A string with all emoji that represent the current sticker.
         """
-        return self._from_attr(types.DocumentAttributeSticker, 'alt')
+        return self._from_attr(types.DocumentAttributeSticker, "alt")
 
     @property
     def sticker_set(self):
         """
         The :tl:`InputStickerSet` to which the sticker file belongs.
         """
-        return self._from_attr(types.DocumentAttributeSticker, 'stickerset')
+        return self._from_attr(types.DocumentAttributeSticker, "stickerset")
 
     @property
     def size(self):
@@ -135,7 +139,10 @@ class File:
         For photos, this is the heaviest thumbnail, as it often repressents the largest dimensions.
         """
         if isinstance(self.media, types.Photo):
-            return max(filter(None, map(utils._photo_size_byte_count, self.media.sizes)), default=None)
+            return max(
+                filter(None, map(utils._photo_size_byte_count, self.media.sizes)),
+                default=None,
+            )
         elif isinstance(self.media, types.Document):
             return self.media.size
 

@@ -8,7 +8,8 @@ class RequestState:
     it belongs to, the request itself, the request as bytes, and the future
     result that will eventually be resolved.
     """
-    __slots__ = ('container_id', 'msg_id', 'request', 'data', 'future', 'after')
+
+    __slots__ = ("container_id", "msg_id", "request", "data", "future", "after")
 
     def __init__(self, request, after=None):
         self.container_id = None

@@ -47,18 +47,18 @@ class InlineQuery(EventBuilder):
                     builder.article('lowercase', text=event.text.lower()),
                 ])
     """
-    def __init__(
-            self, users=None, *, blacklist_users=False, func=None, pattern=None):
+
+    def __init__(self, users=None, *, blacklist_users=False, func=None, pattern=None):
         super().__init__(users, blacklist_chats=blacklist_users, func=func)
 
         if isinstance(pattern, str):
             self.pattern = re.compile(pattern).match
         elif not pattern or callable(pattern):
             self.pattern = pattern
-        elif hasattr(pattern, 'match') and callable(pattern.match):
+        elif hasattr(pattern, "match") and callable(pattern.match):
             self.pattern = pattern.match
         else:
-            raise TypeError('Invalid pattern type given')
+            raise TypeError("Invalid pattern type given")
 
     @classmethod
     def build(cls, update, others=None, self_id=None):
@@ -89,6 +89,7 @@ class InlineQuery(EventBuilder):
                 The resulting object from calling the passed ``pattern``
                 function, which is ``re.compile(...).match`` by default.
         """
+
         def __init__(self, query):
             super().__init__(chat_peer=types.PeerUser(query.user_id))
             SenderGetter.__init__(self, query.user_id)
@@ -99,7 +100,8 @@ class InlineQuery(EventBuilder):
         def _set_client(self, client):
             super()._set_client(client)
             self._sender, self._input_sender = utils._get_entity_pair(
-                self.sender_id, self._entities, client._mb_entity_cache)
+                self.sender_id, self._entities, client._mb_entity_cache
+            )
 
         @property
         def id(self):
@@ -141,9 +143,16 @@ class InlineQuery(EventBuilder):
             return custom.InlineBuilder(self._client)
 
         async def answer(
-                self, results=None, cache_time=0, *,
-                gallery=False, next_offset=None, private=False,
-                switch_pm=None, switch_pm_param=''):
+            self,
+            results=None,
+            cache_time=0,
+            *,
+            gallery=False,
+            next_offset=None,
+            private=False,
+            switch_pm=None,
+            switch_pm_param=""
+        ):
             """
             Answers the inline query with the given results.
 
@@ -233,7 +242,7 @@ class InlineQuery(EventBuilder):
                     gallery=gallery,
                     next_offset=next_offset,
                     private=private,
-                    switch_pm=switch_pm
+                    switch_pm=switch_pm,
                 )
             )
 

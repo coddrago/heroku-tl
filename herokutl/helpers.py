@@ -1,4 +1,5 @@
 """Various helpers not related to the Telegram API itself"""
+
 import asyncio
 import io
 import enum
@@ -26,7 +27,7 @@ _log = logging.getLogger(__name__)
 
 def generate_random_long(signed=True):
     """Generates a random long integer (8 bytes), which is optionally signed"""
-    return int.from_bytes(os.urandom(8), signed=signed, byteorder='little')
+    return int.from_bytes(os.urandom(8), signed=signed, byteorder="little")
 
 
 def ensure_parent_dir_exists(file_path):
@@ -37,16 +38,20 @@ def ensure_parent_dir_exists(file_path):
 
 
 def add_surrogate(text):
-    return ''.join(
+    return "".join(
         # SMP -> Surrogate Pairs (Telegram offsets are calculated with these).
         # See https://en.wikipedia.org/wiki/Plane_(Unicode)#Overview for more.
-        ''.join(chr(y) for y in struct.unpack('<HH', x.encode('utf-16le')))
-        if (0x10000 <= ord(x) <= 0x10FFFF) else x for x in text
+        (
+            "".join(chr(y) for y in struct.unpack("<HH", x.encode("utf-16le")))
+            if (0x10000 <= ord(x) <= 0x10FFFF)
+            else x
+        )
+        for x in text
     )
 
 
 def del_surrogate(text):
-    return text.encode('utf-16', 'surrogatepass').decode('utf-16')
+    return text.encode("utf-16", "surrogatepass").decode("utf-16")
 
 
 def within_surrogate(text, index, *, length=None):
@@ -57,9 +62,9 @@ def within_surrogate(text, index, *, length=None):
         length = len(text)
 
     return (
-            1 < index < len(text) and  # in bounds
-            '\ud800' <= text[index - 1] <= '\udbff' and  # previous is
-            '\ud800' <= text[index] <= '\udfff'  # current is
+        1 < index < len(text)  # in bounds
+        and "\ud800" <= text[index - 1] <= "\udbff"  # previous is
+        and "\ud800" <= text[index] <= "\udfff"  # current is
     )
 
 
@@ -155,7 +160,6 @@ def retry_range(retries, force_retry=True):
         yield attempt
 
 
-
 async def _maybe_await(value):
     if inspect.isawaitable(value):
         return await value
@@ -193,11 +197,19 @@ async def _cancel(log, **tasks):
             # In Python 3.6, the above RuntimeError is an AssertionError
             # See https://github.com/python/cpython/blob/7df32f844efed33ca781a016017eab7050263b90/Lib/asyncio/futures.py#L328
             if e.args != ("yield from wasn't used with future",):
-                log.exception('Unhandled exception from %s after cancelling '
-                              '%s (%s)', name, type(task), task)
+                log.exception(
+                    "Unhandled exception from %s after cancelling " "%s (%s)",
+                    name,
+                    type(task),
+                    task,
+                )
         except Exception:
-            log.exception('Unhandled exception from %s after cancelling '
-                          '%s (%s)', name, type(task), task)
+            log.exception(
+                "Unhandled exception from %s after cancelling " "%s (%s)",
+                name,
+                type(task),
+                task,
+            )
 
 
 def _sync_enter(self):
@@ -205,7 +217,7 @@ def _sync_enter(self):
     Helps to cut boilerplate on async context
     managers that offer synchronous variants.
     """
-    if hasattr(self, 'loop'):
+    if hasattr(self, "loop"):
         loop = self.loop
     else:
         loop = self._client.loop
@@ -220,7 +232,7 @@ def _sync_enter(self):
 
 
 def _sync_exit(self, *args):
-    if hasattr(self, 'loop'):
+    if hasattr(self, "loop"):
         loop = self.loop
     else:
         loop = self._client.loop
@@ -237,31 +249,34 @@ def _entity_type(entity):
     # Still, assert that it's the right type to not return false results.
     try:
         if entity.SUBCLASS_OF_ID not in (
-                0x2d45687,  # crc32(b'Peer')
-                0xc91c90b6,  # crc32(b'InputPeer')
-                0xe669bf46,  # crc32(b'InputUser')
-                0x40f202fd,  # crc32(b'InputChannel')
-                0x2da17977,  # crc32(b'User')
-                0xc5af5d94,  # crc32(b'Chat')
-                0x1f4661b9,  # crc32(b'UserFull')
-                0xd49a2697,  # crc32(b'ChatFull')
+            0x2D45687,  # crc32(b'Peer')
+            0xC91C90B6,  # crc32(b'InputPeer')
+            0xE669BF46,  # crc32(b'InputUser')
+            0x40F202FD,  # crc32(b'InputChannel')
+            0x2DA17977,  # crc32(b'User')
+            0xC5AF5D94,  # crc32(b'Chat')
+            0x1F4661B9,  # crc32(b'UserFull')
+            0xD49A2697,  # crc32(b'ChatFull')
         ):
-            raise TypeError('{} does not have any entity type'.format(entity))
+            raise TypeError("{} does not have any entity type".format(entity))
     except AttributeError:
-        raise TypeError('{} is not a TLObject, cannot determine entity type'.format(entity))
+        raise TypeError(
+            "{} is not a TLObject, cannot determine entity type".format(entity)
+        )
 
     name = entity.__class__.__name__
-    if 'User' in name:
+    if "User" in name:
         return _EntityType.USER
-    elif 'Chat' in name:
+    elif "Chat" in name:
         return _EntityType.CHAT
-    elif 'Channel' in name:
+    elif "Channel" in name:
         return _EntityType.CHANNEL
-    elif 'Self' in name:
+    elif "Self" in name:
         return _EntityType.USER
 
     # 'Empty' in name or not found, we don't care, not a valid entity.
-    raise TypeError('{} does not have any entity type'.format(entity))
+    raise TypeError("{} does not have any entity type".format(entity))
+
 
 # endregion
 
@@ -270,8 +285,8 @@ def _entity_type(entity):
 
 def generate_key_data_from_nonce(server_nonce, new_nonce):
     """Generates the key data corresponding to the given nonce"""
-    server_nonce = server_nonce.to_bytes(16, 'little', signed=True)
-    new_nonce = new_nonce.to_bytes(32, 'little', signed=True)
+    server_nonce = server_nonce.to_bytes(16, "little", signed=True)
+    new_nonce = new_nonce.to_bytes(32, "little", signed=True)
     hash1 = sha1(new_nonce + server_nonce).digest()
     hash2 = sha1(server_nonce + new_nonce).digest()
     hash3 = sha1(new_nonce + new_nonce).digest()
@@ -309,17 +324,16 @@ class TotalList(list):
                 print(x.text)
 
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.total = 0
 
     def __str__(self):
-        return '[{}, total={}]'.format(
-            ', '.join(str(x) for x in self), self.total)
+        return "[{}, total={}]".format(", ".join(str(x) for x in self), self.total)
 
     def __repr__(self):
-        return '[{}, total={}]'.format(
-            ', '.join(repr(x) for x in self), self.total)
+        return "[{}, total={}]".format(", ".join(repr(x) for x in self), self.total)
 
 
 class _FileStream(io.IOBase):
@@ -332,6 +346,7 @@ class _FileStream(io.IOBase):
 
     It also provides access to the name and file size (also necessary).
     """
+
     def __init__(self, file, *, file_size=None):
         if isinstance(file, Path):
             file = str(file.absolute())
@@ -346,7 +361,7 @@ class _FileStream(io.IOBase):
         if isinstance(self._file, str):
             self._name = os.path.basename(self._file)
             self._size = os.path.getsize(self._file)
-            self._stream = open(self._file, 'rb')
+            self._stream = open(self._file, "rb")
             self._close_stream = True
             return self
 
@@ -356,15 +371,15 @@ class _FileStream(io.IOBase):
             self._close_stream = True
             return self
 
-        if not callable(getattr(self._file, 'read', None)):
-            raise TypeError('file description should have a `read` method')
+        if not callable(getattr(self._file, "read", None)):
+            raise TypeError("file description should have a `read` method")
 
-        self._name = getattr(self._file, 'name', None)
+        self._name = getattr(self._file, "name", None)
         self._stream = self._file
         self._close_stream = False
 
         if self._size is None:
-            if callable(getattr(self._file, 'seekable', None)):
+            if callable(getattr(self._file, "seekable", None)):
                 seekable = await _maybe_await(self._file.seekable())
             else:
                 seekable = False
@@ -376,8 +391,9 @@ class _FileStream(io.IOBase):
                 await _maybe_await(self._file.seek(pos, os.SEEK_SET))
             else:
                 _log.warning(
-                    'Could not determine file size beforehand so the entire '
-                    'file will be read in-memory')
+                    "Could not determine file size beforehand so the entire "
+                    "file will be read in-memory"
+                )
 
                 data = await _maybe_await(self._file.read())
                 self._size = len(data)
@@ -399,21 +415,50 @@ class _FileStream(io.IOBase):
         return self._name
 
     # Proxy all the methods. Doesn't need to be readable (makes multiline edits easier)
-    def read(self, *args, **kwargs): return self._stream.read(*args, **kwargs)
-    def readinto(self, *args, **kwargs): return self._stream.readinto(*args, **kwargs)
-    def write(self, *args, **kwargs): return self._stream.write(*args, **kwargs)
-    def fileno(self, *args, **kwargs): return self._stream.fileno(*args, **kwargs)
-    def flush(self, *args, **kwargs): return self._stream.flush(*args, **kwargs)
-    def isatty(self, *args, **kwargs): return self._stream.isatty(*args, **kwargs)
-    def readable(self, *args, **kwargs): return self._stream.readable(*args, **kwargs)
-    def readline(self, *args, **kwargs): return self._stream.readline(*args, **kwargs)
-    def readlines(self, *args, **kwargs): return self._stream.readlines(*args, **kwargs)
-    def seek(self, *args, **kwargs): return self._stream.seek(*args, **kwargs)
-    def seekable(self, *args, **kwargs): return self._stream.seekable(*args, **kwargs)
-    def tell(self, *args, **kwargs): return self._stream.tell(*args, **kwargs)
-    def truncate(self, *args, **kwargs): return self._stream.truncate(*args, **kwargs)
-    def writable(self, *args, **kwargs): return self._stream.writable(*args, **kwargs)
-    def writelines(self, *args, **kwargs): return self._stream.writelines(*args, **kwargs)
+    def read(self, *args, **kwargs):
+        return self._stream.read(*args, **kwargs)
+
+    def readinto(self, *args, **kwargs):
+        return self._stream.readinto(*args, **kwargs)
+
+    def write(self, *args, **kwargs):
+        return self._stream.write(*args, **kwargs)
+
+    def fileno(self, *args, **kwargs):
+        return self._stream.fileno(*args, **kwargs)
+
+    def flush(self, *args, **kwargs):
+        return self._stream.flush(*args, **kwargs)
+
+    def isatty(self, *args, **kwargs):
+        return self._stream.isatty(*args, **kwargs)
+
+    def readable(self, *args, **kwargs):
+        return self._stream.readable(*args, **kwargs)
+
+    def readline(self, *args, **kwargs):
+        return self._stream.readline(*args, **kwargs)
+
+    def readlines(self, *args, **kwargs):
+        return self._stream.readlines(*args, **kwargs)
+
+    def seek(self, *args, **kwargs):
+        return self._stream.seek(*args, **kwargs)
+
+    def seekable(self, *args, **kwargs):
+        return self._stream.seekable(*args, **kwargs)
+
+    def tell(self, *args, **kwargs):
+        return self._stream.tell(*args, **kwargs)
+
+    def truncate(self, *args, **kwargs):
+        return self._stream.truncate(*args, **kwargs)
+
+    def writable(self, *args, **kwargs):
+        return self._stream.writable(*args, **kwargs)
+
+    def writelines(self, *args, **kwargs):
+        return self._stream.writelines(*args, **kwargs)
 
     # close is special because it will be called by __del__ but we do NOT
     # want to close the file unless we have to (we're just a wrapper).
@@ -422,7 +467,9 @@ class _FileStream(io.IOBase):
     def close(self, *args, **kwargs):
         pass
 
+
 # endregion
+
 
 def get_running_loop():
     try:

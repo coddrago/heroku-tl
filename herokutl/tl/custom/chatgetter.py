@@ -10,6 +10,7 @@ class ChatGetter(abc.ABC):
     and `chat_id` properties and `get_chat` and `get_input_chat`
     methods.
     """
+
     def __init__(self, chat_peer=None, *, input_chat=None, chat=None, broadcast=None):
         self._chat_peer = chat_peer
         self._input_chat = input_chat
@@ -43,11 +44,11 @@ class ChatGetter(abc.ABC):
         this chat, use `get_input_chat()` instead.
         """
         # See `get_sender` for information about 'min'.
-        if (self._chat is None or getattr(self._chat, 'min', None))\
-                and await self.get_input_chat():
+        if (
+            self._chat is None or getattr(self._chat, "min", None)
+        ) and await self.get_input_chat():
             try:
-                self._chat =\
-                    await self._client.get_entity(self._input_chat)
+                self._chat = await self._client.get_entity(self._input_chat)
             except ValueError:
                 await self._refetch_chat()
         return self._chat
@@ -67,7 +68,8 @@ class ChatGetter(abc.ABC):
         if self._input_chat is None and self._chat_peer and self._client:
             try:
                 self._input_chat = self._client._mb_entity_cache.get(
-                        utils.get_peer_id(self._chat_peer, add_mark=False))._as_input_peer()
+                    utils.get_peer_id(self._chat_peer, add_mark=False)
+                )._as_input_peer()
             except AttributeError:
                 pass
 
@@ -126,7 +128,7 @@ class ChatGetter(abc.ABC):
         (e.g. on `events.MessageDeleted <telethon.events.messagedeleted.MessageDeleted>`).
         """
         # TODO Cache could tell us more in the future
-        if self._broadcast is None and hasattr(self.chat, 'broadcast'):
+        if self._broadcast is None and hasattr(self.chat, "broadcast"):
             self._broadcast = bool(self.chat.broadcast)
 
         if isinstance(self._chat_peer, types.PeerChannel):
