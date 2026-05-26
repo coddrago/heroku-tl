@@ -1173,7 +1173,7 @@ class MessageMethods:
         message: "typing.Union[int, types.Message, types.InputMessageID, str]" = None,
         text: str = None,
         *,
-        parse_mode: str = (),
+        parse_mode: typing.Optional[str] = (),
         attributes: "typing.Sequence[types.TypeDocumentAttribute]" = None,
         formatting_entities: typing.Optional[
             typing.List[types.TypeMessageEntity]

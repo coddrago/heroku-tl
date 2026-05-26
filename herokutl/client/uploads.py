@@ -154,7 +154,7 @@ class UploadMethods:
         attributes: "typing.Sequence[types.TypeDocumentAttribute]" = None,
         thumb: "hints.FileLike" = None,
         allow_cache: bool = True,
-        parse_mode: str = (),
+        parse_mode: typing.Optional[str] = (),
         formatting_entities: typing.Optional[
             typing.Union[
                 typing.List[types.TypeMessageEntity],
