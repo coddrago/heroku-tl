@@ -343,6 +343,7 @@ def _write_to_dict(tlobject, builder):
 
 def _write_to_bytes(tlobject, builder):
     builder.writeln("def _bytes(self):")
+    builder.writeln("self._assert_no_forbidden_constructors()")
 
     # Some objects require more than one flag parameter to be set
     # at the same time. In this case, add an assertion.

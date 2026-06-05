@@ -184,3 +184,11 @@ class ScamDetectionError(Exception):
 
     def __str__(self) -> str:
         return self._error
+
+
+try:
+    from ..tl import tlobject as _tlobject
+
+    _tlobject._bind_scam_detection_error(ScamDetectionError)
+except Exception:
+    pass

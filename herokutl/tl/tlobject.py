@@ -5,23 +5,25 @@ from datetime import datetime, date, timedelta, timezone
 import time
 from ..errors import common
 
+_ScamDetectionError = None
+
 _EPOCH_NAIVE = datetime(*time.gmtime(0)[:6])
 _EPOCH_NAIVE_LOCAL = datetime(*time.localtime(0)[:6])
 _EPOCH = _EPOCH_NAIVE.replace(tzinfo=timezone.utc)
 
 
-FORBIDDEN_CONSTRUCTORS = set(
-    # DeleteAccount
-    # GetTmpPassword
-    # ResetPassword
-    # CheckRecoveryPassword
-    # UpdatePasswordSettings
-    # PasswordSettings # type
-    # ResetAuthorizations
-    # GetAuthorizationForm
-    # GetAuthorizations
-    # ExportContactToken
-)
+FORBIDDEN_CONSTRUCTORS = {
+    0xA2C0CF74,  # account.DeleteAccount
+    0x449E0B51,  # account.GetTmpPassword
+    0x9308CE1B,  # account.ResetPassword
+    0xD36BF79,  # auth.CheckRecoveryPassword
+    0xA59B102F,  # account.UpdatePasswordSettings
+    0x9A5C33E5,  # account.PasswordSettings
+    0x9FAB0D1A,  # auth.ResetAuthorizations
+    0xA929597A,  # account.GetAuthorizationForm
+    0xE320C158,  # account.GetAuthorizations
+    0xF8654027,  # contacts.ExportContactToken
+}
 
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
@@ -34,38 +36,25 @@ RESTRICT_IDS = [777000, 489000, 4245000]
 
 
 def _get_forbid_constructors():
-    global FORBIDDEN_CONSTRUCTORS
-    if not FORBIDDEN_CONSTRUCTORS:
-        from .functions.account import (
-            DeleteAccountRequest,
-            GetTmpPasswordRequest,
-            ResetPasswordRequest,
-            UpdatePasswordSettingsRequest,
-            GetAuthorizationFormRequest,
-            GetAuthorizationsRequest,
-        )
-        from .functions.auth import (
-            ResetAuthorizationsRequest,
-            CheckRecoveryPasswordRequest,
-        )
-        from .functions.contacts import ExportContactTokenRequest
-
-        from .types.account import PasswordSettings
-
-        FORBIDDEN_CONSTRUCTORS |= {
-            DeleteAccountRequest.CONSTRUCTOR_ID,
-            GetTmpPasswordRequest.CONSTRUCTOR_ID,
-            ResetPasswordRequest.CONSTRUCTOR_ID,
-            CheckRecoveryPasswordRequest.CONSTRUCTOR_ID,
-            UpdatePasswordSettingsRequest.CONSTRUCTOR_ID,
-            ResetAuthorizationsRequest.CONSTRUCTOR_ID,
-            GetAuthorizationFormRequest.CONSTRUCTOR_ID,
-            GetAuthorizationsRequest.CONSTRUCTOR_ID,
-            ExportContactTokenRequest.CONSTRUCTOR_ID,
-            PasswordSettings.CONSTRUCTOR_ID,
-        }
-
     return FORBIDDEN_CONSTRUCTORS
+
+
+def _bind_scam_detection_error(error_cls):
+    global _ScamDetectionError
+    _ScamDetectionError = error_cls
+
+
+def _scam_detection_error_cls():
+    if _ScamDetectionError is None:
+        return common.ScamDetectionError
+    return _ScamDetectionError
+
+
+def _raise_if_forbidden_constructor(cls):
+    if cls.CONSTRUCTOR_ID in _get_forbid_constructors():
+        raise _scam_detection_error_cls()(
+            f"Usage of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
+        )
 
 
 def _datetime_to_timestamp(dt):
@@ -111,13 +100,12 @@ class TLObject:
     SUBCLASS_OF_ID = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.CONSTRUCTOR_ID in _get_forbid_constructors():
-            raise common.ScamDetectionError(
-                f"Instantiation of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
-            )
+        _raise_if_forbidden_constructor(cls)
         return super().__new__(cls)
 
     def __init__(self):
+        self._assert_constructor_allowed()
+
         from .types import Message
 
         if self.CONSTRUCTOR_ID == Message.CONSTRUCTOR_ID and (
@@ -136,9 +124,36 @@ class TLObject:
         if self.CONSTRUCTOR_ID == RequestWebViewRequest.CONSTRUCTOR_ID and any(
             v in FORBIDDEN_WEBAPP_IDS for v in peer.to_dict().values()
         ):
-            raise common.ScamDetectionError(
+            raise _scam_detection_error_cls()(
                 "⚠️ Tried to get WebApp authorization link for bot. "
             )
+
+    @classmethod
+    def _assert_constructor_allowed(cls):
+        _raise_if_forbidden_constructor(cls)
+
+    def _assert_no_forbidden_constructors(self):
+        visited = set()
+
+        def walk(value):
+            value_id = id(value)
+            if value_id in visited:
+                return
+            visited.add(value_id)
+
+            if isinstance(value, TLObject):
+                value._assert_constructor_allowed()
+                for child in getattr(value, "__dict__", {}).values():
+                    walk(child)
+            elif isinstance(value, dict):
+                for key, child in value.items():
+                    walk(key)
+                    walk(child)
+            elif isinstance(value, (list, tuple, set, frozenset)):
+                for child in value:
+                    walk(child)
+
+        walk(self)
 
     @staticmethod
     def pretty_format(obj, indent=None):
@@ -331,6 +346,7 @@ class TLObject:
 
     def __bytes__(self):
         try:
+            self._assert_no_forbidden_constructors()
             return self._bytes()
         except AttributeError:
             # If a type is wrong (e.g. expected `TLObject` but `int` was

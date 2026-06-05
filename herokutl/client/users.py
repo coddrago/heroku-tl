@@ -10,6 +10,9 @@ from ..helpers import retry_range
 from ..tl import TLRequest, types, functions
 
 _NOT_A_REQUEST = lambda: TypeError("You can only invoke requests, not types!")
+_GET_USERS_REQUEST_ID = 0x0D91A548
+_INPUT_USER_SELF_ID = 0xF7C1B13F
+_MASKED_PHONE = "phone?"
 
 if typing.TYPE_CHECKING:
     from .telegramclient import TelegramClient
@@ -23,6 +26,47 @@ def _fmt_flood(delay, request, *, early=False, td=datetime.timedelta):
         td(seconds=delay),
         request.__class__.__name__,
     )
+
+
+def _constructor_matches(obj, constructor_id, name):
+    return (
+        getattr(obj, "CONSTRUCTOR_ID", None) == constructor_id
+        or obj.__class__.__name__ == name
+    )
+
+
+def _is_input_user_self(user):
+    return _constructor_matches(user, _INPUT_USER_SELF_ID, "InputUserSelf")
+
+
+def _is_get_self_user_request(request):
+    if not _constructor_matches(request, _GET_USERS_REQUEST_ID, "GetUsersRequest"):
+        return False
+
+    users = getattr(request, "id", ())
+    if users is None:
+        return False
+    if not utils.is_list_like(users):
+        users = (users,)
+
+    return any(_is_input_user_self(user) for user in users)
+
+
+def _mask_phone_fields(result):
+    users = result if utils.is_list_like(result) else (result,)
+    for user in users:
+        if hasattr(user, "phone"):
+            try:
+                setattr(user, "phone", _MASKED_PHONE)
+            except Exception:
+                pass
+    return result
+
+
+def _sanitize_get_self_user_result(request, result):
+    if result is not None and _is_get_self_user_request(request):
+        return _mask_phone_fields(result)
+    return result
 
 
 class UserMethods:
@@ -51,7 +95,9 @@ class UserMethods:
         for i, r in enumerate(requests):
             if not isinstance(r, TLRequest):
                 raise _NOT_A_REQUEST()
+            r._assert_no_forbidden_constructors()
             await r.resolve(self, utils)
+            r._assert_no_forbidden_constructors()
 
             # Avoid making the request if it's already in a flood wait
             if r.CONSTRUCTOR_ID in self._flood_waited_requests:
@@ -90,6 +136,9 @@ class UserMethods:
                             exceptions.append(e)
                             results.append(None)
                             continue
+                        result = _sanitize_get_self_user_result(
+                            requests[request_index], result
+                        )
                         self.session.process_entities(result)  # skip maybe_async
                         exceptions.append(None)
                         results.append(result)
@@ -100,6 +149,9 @@ class UserMethods:
                         return results
                 else:
                     result = await future
+                    result = _sanitize_get_self_user_result(
+                        requests[request_index], result
+                    )
                     self.session.process_entities(result)  # skip maybe_async
                     return result
             except (
