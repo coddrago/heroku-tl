@@ -844,6 +844,8 @@ class Message(ChatGetter, SenderGetter, TLObject):
         with ``entity`` already set.
         """
         if self._client:
+            if 'reply_to' not in kwargs and self.reply_to and self.reply_to.forum_topic:
+                kwargs['reply_to'] = self.reply_to.reply_to_top_id or self.reply_to.reply_to_msg_id
             return await self._client.send_message(
                 await self.get_input_chat(), *args, **kwargs
             )

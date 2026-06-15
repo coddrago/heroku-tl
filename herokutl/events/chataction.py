@@ -230,6 +230,8 @@ class ChatAction(EventBuilder):
             `telethon.client.messages.MessageMethods.send_message` with
             ``entity`` already set.
             """
+            if 'reply_to' not in kwargs and self.action_message and self.action_message.reply_to and self.action_message.reply_to.forum_topic:
+                kwargs['reply_to'] = self.action_message.reply_to.reply_to_top_id or self.action_message.reply_to.reply_to_msg_id
             return await self._client.send_message(
                 await self.get_input_chat(), *args, **kwargs
             )
