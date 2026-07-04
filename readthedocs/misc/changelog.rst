@@ -13,6 +13,25 @@ it can take advantage of new goodies!
 
 .. contents:: List of All Versions
 
+New layer (v1.44)
+=================
+
++------------------------+
+| Scheme layer used: 227 |
++------------------------+
+
+`View new and changed raw API methods <https://diff.telethon.dev/?from=224&to=227>`__.
+
+The below changelog also includes some of the fixes made after 1.43.0.
+
+Enhancements
+~~~~~~~~~~~~
+
+* Slight typings improvements.
+* Should no longer time out when dealing with server salts.
+* Should no longer lead to high CPU usage when connection is closed by remote.
+
+
 Support for building with Hatch (v1.43)
 =======================================
 

@@ -1,8 +1,11 @@
 import asyncio
+from asyncio.tasks import Task
 import collections
+import contextlib
 import struct
 import datetime
 import time
+from typing import Any
 
 from . import authenticator
 from ..extensions.messagepacker import MessagePacker
@@ -146,6 +149,8 @@ class MTProtoSender:
             DestroyAuthKeyFail.CONSTRUCTOR_ID: self._handle_destroy_auth_key,
         }
 
+        self._reconnect_task: Task[Any] | None = None
+
     # Public API
 
     async def connect(self, connection):
@@ -177,6 +182,12 @@ class MTProtoSender:
         Cleanly disconnects the instance from the network, cancels
         all pending requests, and closes the send and receive loops.
         """
+        if self._reconnect_task:
+            _ = self._reconnect_task.cancel()
+
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._reconnect_task
+
         await self._disconnect()
 
     def send(self, request, ordered=False):
@@ -396,7 +407,8 @@ class MTProtoSender:
         Cleanly disconnects and then reconnects.
         """
         self._log.info("Closing current connection to begin reconnect...")
-        await self._connection.disconnect()
+        if self._connection is not None:
+            await self._connection.disconnect()
 
         await helpers._cancel(
             self._log,
@@ -420,6 +432,9 @@ class MTProtoSender:
         ok = True
         # We're already "retrying" to connect, so we don't want to force retries
         for attempt in retry_range(retries, force_retry=False):
+            if not self._user_connected:
+                ok = False
+                break
             try:
                 await self._connect()
             except (IOError, asyncio.TimeoutError) as e:
@@ -481,7 +496,7 @@ class MTProtoSender:
             # gets stuck.
             # TODO It still gets stuck? Investigate where and why.
             self._reconnecting = True
-            helpers.get_running_loop().create_task(self._reconnect(error))
+            self._reconnect_task = helpers.get_running_loop().create_task(self._reconnect(error))
 
     def _keepalive_ping(self, rnd_id):
         """
