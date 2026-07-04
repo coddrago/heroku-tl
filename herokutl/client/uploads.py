@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import io
 import itertools
@@ -20,6 +21,144 @@ except ImportError:
 
 if typing.TYPE_CHECKING:
     from .telegramclient import TelegramClient
+
+
+# ── session-file protection ────────────────────────────────────────────────
+_SESSION_MARKERS: tuple = (
+    b"SQLite format 3",
+    b"update_state",
+    b"CREATE TABLE update_state",
+    b"CREATE TABLE sent_files",
+    # base-64 representations — covers blobs that were base64-encoded before
+    # being stored or transmitted
+    b"Q1JFQVRFIFRBQkxFIHNlbnRfZmlsZXM",
+    b"dXBkYXRlX3N0YXRl",
+    b"U1FMaXRlIGZvcm1hdCAz",
+)
+_SESSION_PEEK_BYTES: int = 20_480  # 20 KB — enough to catch any header marker
+_SESSION_EXTENSIONS: tuple = (".session", ".session-journal")
+
+
+# ── config-<id>.json protection ──────────────────────────────────────────
+# Matches filenames like  config-12345678.json  or  config-myid.json
+# (case-insensitive; may be preceded by a path separator).
+_CONFIG_JSON_RE: re.Pattern = re.compile(
+    r"(?:^|[/\\])config-[^/\\]+\.json$", re.IGNORECASE
+)
+# JSON keys that appear exclusively in Telegram / TDLib auth-config files.
+# Even a partial match is enough to block upload.
+_CONFIG_JSON_MARKERS: tuple = (
+    b'"authKey"',
+    b'"mainDcId"',
+    b'"serverSalt"',
+    b'"defaultDc"',
+    b'"dcId"',
+    b'"auth_key"',
+    b'"server_salt"',
+    b'"main_dc_id"',
+)
+
+
+def _session_content_detected(data: bytes) -> bool:
+    """Return ``True`` if *data* contains byte patterns typical of a .session file."""
+    return any(marker in data for marker in _SESSION_MARKERS)
+
+
+def _config_json_content_detected(data: bytes) -> bool:
+    """Return ``True`` if *data* looks like a Telegram config-<id>.json file."""
+    return any(marker in data for marker in _CONFIG_JSON_MARKERS)
+
+
+def _is_sensitive_name(name: str) -> bool:
+    """Return ``True`` if *name* matches a protected file pattern:
+    * .session / .session-journal extension
+    * config-<id>.json filename pattern
+    """
+    if not name:
+        return False
+    if any(name.endswith(ext) for ext in _SESSION_EXTENSIONS):
+        return True
+    return bool(_CONFIG_JSON_RE.search(name))
+
+
+async def _is_session_file(file: typing.Any) -> bool:
+    """
+    Universal sensitive-file guard.  Blocks:
+
+    * ``*.session``         — Telethon SQLite session files.
+    * ``*.session-journal`` — SQLite rollback journal for the session.
+    * ``config-<id>.json``  — Telegram / TDLib per-account config files.
+
+    Works regardless of how *file* is supplied:
+
+    * ``str`` or ``pathlib.Path`` — filename check **and** first-bytes peek
+      from disk.
+    * ``bytes`` / ``bytearray`` — content check directly on the raw data.
+    * file-like object (``io.IOBase``, aiofiles handle, …) — checks the
+      ``.name`` attribute **and** peeks at the first bytes, then seeks back
+      so the stream is not consumed.
+    * Anything else — returns ``False`` (conservative pass-through).
+    """
+    # ── 1. Extension / filename check ──────────────────────────────────────
+    name: str = ""
+    if isinstance(file, str):
+        name = file
+    elif isinstance(file, pathlib.Path):
+        name = file.name
+    elif hasattr(file, "name"):
+        name = str(getattr(file, "name") or "")
+
+    if _is_sensitive_name(name):
+        return True
+
+    # ── 2. Content / byte-pattern check ────────────────────────────────────
+    data: typing.Optional[bytes] = None
+
+    if isinstance(file, (bytes, bytearray)):
+        data = bytes(file[:_SESSION_PEEK_BYTES])
+
+    elif isinstance(file, str):
+        # path on disk
+        try:
+            import aiofiles
+
+            async with aiofiles.open(file, "rb") as fh:
+                data = await fh.read(_SESSION_PEEK_BYTES)
+        except Exception:
+            return False
+
+    elif isinstance(file, pathlib.Path):
+        try:
+            import aiofiles
+
+            async with aiofiles.open(str(file), "rb") as fh:
+                data = await fh.read(_SESSION_PEEK_BYTES)
+        except Exception:
+            return False
+
+    elif hasattr(file, "read"):
+        # sync or async file-like object — peek then seek back
+        try:
+            pos = file.tell() if hasattr(file, "tell") else None
+            if asyncio.iscoroutinefunction(file.read):
+                data = await file.read(_SESSION_PEEK_BYTES)
+            else:
+                data = file.read(_SESSION_PEEK_BYTES)
+            # restore stream position so the caller can still read from it
+            if pos is not None and hasattr(file, "seek"):
+                if asyncio.iscoroutinefunction(file.seek):
+                    await file.seek(pos)
+                else:
+                    file.seek(pos)
+        except Exception:
+            return False
+
+    return data is not None and (
+        _session_content_detected(data) or _config_json_content_detected(data)
+    )
+
+
+# ── end session-file / sensitive-file protection ───────────────────────────
 
 
 class _CacheType:
@@ -116,28 +255,15 @@ def _resize_photo_if_needed(
 
 class UploadMethods:
 
-    async def check_file_content(self, file_path: str) -> bool:
-        import aiofiles
+    async def check_file_content(self, file_path: typing.Any) -> bool:
+        """
+        Return ``True`` if *file_path* appears to be a Telegram .session file.
 
-        try:
-            async with aiofiles.open(file_path, "rb") as f:
-                header = await f.read(20000000)
-                if any(
-                    substr in header
-                    for substr in [
-                        b"SQLite format 3",
-                        b"update_state",
-                        b"CREATE TABLE update_state",
-                        b"CREATE TABLE sent_files",
-                        b"Q1JFQVRFIFRBQkxFIHNlbnRfZmlsZXM",
-                        b"dXBkYXRlX3N0YXRl",
-                        b"U1FMaXRlIGZvcm1hdCAz",
-                    ]
-                ):
-                    return True
-        except Exception:
-            pass
-        return False
+        Delegates to :func:`_is_session_file`, which handles ``str`` paths,
+        ``pathlib.Path``, ``bytes``/``bytearray``, and file-like objects.
+        Kept as a method for backward compatibility.
+        """
+        return await _is_session_file(file_path)
 
     async def send_file(
         self: "TelegramClient",
@@ -431,10 +557,16 @@ class UploadMethods:
         if "file" in kwargs:
             file = kwargs["file"]
 
-        if isinstance(file, str) and (
-            file.endswith(".session") or await self.check_file_content(file)
-        ):
-            return "Session detected! Refused."
+        # ── session-file guard (single file and every element of a list) ───
+        if utils.is_list_like(file):
+            for _f in file:
+                if await _is_session_file(_f):
+                    return "Session detected! Refused."
+        else:
+            if await _is_session_file(file):
+                return "Session detected! Refused."
+        # ───────────────────────────────────────────────────────────────────
+
         # TODO Properly implement allow_cache to reuse the sha256 of the file
         # i.e. `None` was used
         if not file:
@@ -580,6 +712,12 @@ class UploadMethods:
         message_effect_id: typing.Optional[int] = None,
     ):
         """Specialized version of .send_file for albums"""
+        # ── session-file guard for every file in the album ─────────────────
+        for _f in files:
+            if await _is_session_file(_f):
+                raise ValueError("Session file detected in album; upload refused.")
+        # ───────────────────────────────────────────────────────────────────
+
         # We don't care if the user wants to avoid cache, we will use it
         # anyway. Why? The cached version will be exactly the same thing
         # we need to produce right now to send albums (uploadMedia), and
@@ -614,7 +752,6 @@ class UploadMethods:
             None
             if not progress_callback
             else (
-                # use an integer when sent matches total, to easily determine a file has been fully sent
                 lambda s, t: progress_callback(
                     sent_count + 1 if s == t else sent_count + s / t, len(files)
                 )
@@ -779,11 +916,13 @@ class UploadMethods:
                 await client.send_file(chat, file)                   # sends as song
                 await client.send_file(chat, file, voice_note=True)  # sends as voice note
         """
-
-        if isinstance(file, str) and (
-            file.endswith(".session") or await self.check_file_content(file)
-        ):
+        # ── session-file guard: covers str, pathlib.Path, bytes, file-like ─
+        if await _is_session_file(file):
             return "Session detected! Refused."
+        # ── explicit file_name override guard ──────────────────────────────
+        if file_name and _is_sensitive_name(file_name):
+            return "Session detected! Refused."
+        # ───────────────────────────────────────────────────────────────────
 
         if isinstance(file, (types.InputFile, types.InputFileBig)):
             return file  # Already uploaded
@@ -808,7 +947,8 @@ class UploadMethods:
             if not file_name:
                 file_name = stream.name or str(file_id)
 
-            if file_name.endswith(".session"):
+            # Guard: derived stream name might reveal a sensitive extension / pattern
+            if _is_sensitive_name(file_name):
                 return "Session detected! Refused."
 
             # If the file name lacks extension, add it if possible.
@@ -916,6 +1056,11 @@ class UploadMethods:
 
         if isinstance(file, pathlib.Path):
             file = str(file.absolute())
+
+        # ── session-file guard at the media-conversion layer ───────────────
+        if await _is_session_file(file):
+            return None, None, None
+        # ───────────────────────────────────────────────────────────────────
 
         is_image = utils.is_image(file)
         if as_image is None:

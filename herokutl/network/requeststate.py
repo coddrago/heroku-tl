@@ -1,5 +1,7 @@
 import asyncio
 
+from ..tl.tlobject import _raise_if_forbidden_serialized_request
+
 
 class RequestState:
     """
@@ -16,5 +18,6 @@ class RequestState:
         self.msg_id = None
         self.request = request
         self.data = bytes(request)
+        _raise_if_forbidden_serialized_request(request, self.data)
         self.future = asyncio.Future()
         self.after = after

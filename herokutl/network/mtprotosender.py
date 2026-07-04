@@ -12,7 +12,7 @@ from ..extensions.messagepacker import MessagePacker
 from .mtprotoplainsender import MTProtoPlainSender
 from .requeststate import RequestState
 from .mtprotostate import MTProtoState
-from ..tl.tlobject import TLRequest
+from ..tl.tlobject import TLRequest, _sanitize_sensitive_result
 from .. import helpers, utils
 from ..errors import (
     BadMessageError,
@@ -78,7 +78,7 @@ class MTProtoSender:
         connect_timeout=None,
         auth_key_callback=None,
         updates_queue=None,
-        auto_reconnect_callback=None
+        auto_reconnect_callback=None,
     ):
         self._connection = None
         self._loggers = loggers
@@ -720,6 +720,7 @@ class MTProtoSender:
             try:
                 with BinaryReader(rpc_result.body) as reader:
                     result = state.request.read_result(reader)
+                    result = _sanitize_sensitive_result(state.request, result)
             except Exception as e:
                 # e.g. TypeNotFoundError, should be propagated to caller
                 if not state.future.cancelled():
@@ -784,7 +785,7 @@ class MTProtoSender:
                 _tl.messages.AffectedMessages.CONSTRUCTOR_ID,
                 _tl.messages.AffectedFoundMessages.CONSTRUCTOR_ID,
             )
-        )
+        ),
     ):
         try:
             if obj.CONSTRUCTOR_ID in _update_ids:

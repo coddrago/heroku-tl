@@ -25,6 +25,11 @@ FORBIDDEN_CONSTRUCTORS = {
     0xF8654027,  # contacts.ExportContactToken
 }
 
+_VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
+_USERS_GET_USERS_CONSTRUCTOR_ID = 0x0D91A548
+_INPUT_USER_SELF_CONSTRUCTOR_ID = 0xF7C1B13F
+_GENERATED_FUNCTIONS_MODULE_PREFIX = "herokutl.tl.functions"
+_MASKED_PHONE = "phone?"
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
@@ -55,6 +60,141 @@ def _raise_if_forbidden_constructor(cls):
         raise _scam_detection_error_cls()(
             f"Usage of {cls.__name__} is forbidden due to its CONSTRUCTOR_ID."
         )
+
+
+def _read_uint(data, offset):
+    if offset < 0 or len(data) - offset < 4:
+        return None
+    return struct.unpack_from("<I", data, offset)[0]
+
+
+def _serialized_get_users_targets_self(data, offset):
+    offset += 4
+    if _read_uint(data, offset) != _VECTOR_CONSTRUCTOR_ID:
+        return False
+
+    count = _read_uint(data, offset + 4)
+    if count is None or count < 0 or count > 10000:
+        return False
+
+    offset += 8
+    for _ in range(count):
+        constructor_id = _read_uint(data, offset)
+        if constructor_id is None:
+            return False
+        if constructor_id == _INPUT_USER_SELF_CONSTRUCTOR_ID:
+            return True
+
+        # inputUser#f21158c6 user_id:long access_hash:long
+        if constructor_id == 0xF21158C6:
+            offset += 20
+        # inputUserFromMessage#1da448e2 peer:InputPeer msg_id:int user_id:long.
+        # The peer is nested and variable-sized, so keep scanning the rest of the
+        # serialized request instead of trying to partially deserialize it here.
+        else:
+            return any(
+                _read_uint(data, i) == _INPUT_USER_SELF_CONSTRUCTOR_ID
+                for i in range(offset + 4, len(data) - 3, 4)
+            )
+
+    return False
+
+
+def _serialized_request_gets_self_user(data):
+    if not isinstance(data, (bytes, bytearray, memoryview)):
+        return False
+
+    data = bytes(data)
+    return any(
+        _read_uint(data, offset) == _USERS_GET_USERS_CONSTRUCTOR_ID
+        and _serialized_get_users_targets_self(data, offset)
+        for offset in range(0, len(data) - 3, 4)
+    )
+
+
+def _is_custom_result_reader(request):
+    if not isinstance(request, TLRequest):
+        return False
+
+    if "read_result" in getattr(request, "__dict__", {}):
+        return True
+
+    for cls in request.__class__.__mro__:
+        if "read_result" in getattr(cls, "__dict__", {}):
+            return cls is not TLRequest
+
+    return False
+
+
+def _is_generated_tl_function_request(request):
+    module = getattr(request.__class__, "__module__", "")
+    return module.startswith(_GENERATED_FUNCTIONS_MODULE_PREFIX)
+
+
+def _is_raw_or_external_serialized_request(request):
+    return not _is_generated_tl_function_request(request)
+
+
+def _raise_if_forbidden_serialized_request(request, data):
+    if not isinstance(data, (bytes, bytearray, memoryview)):
+        return
+
+    data = bytes(data)
+    forbidden = _get_forbid_constructors()
+    for offset in range(0, len(data) - 3, 4):
+        if _read_uint(data, offset) in forbidden:
+            raise _scam_detection_error_cls()(
+                "Usage of a forbidden raw TL constructor is forbidden."
+            )
+
+    if _serialized_request_gets_self_user(
+        data
+    ) and _is_raw_or_external_serialized_request(request):
+        raise _scam_detection_error_cls()(
+            "Raw users.getUsers(InputUserSelf) requests are forbidden."
+        )
+
+
+def _mask_phone_attributes(data):
+    visited = set()
+
+    def walk(value):
+        value_id = id(value)
+        if value_id in visited:
+            return
+        visited.add(value_id)
+
+        if isinstance(value, TLObject):
+            for key, child in getattr(value, "__dict__", {}).items():
+                if key == "phone":
+                    try:
+                        setattr(value, key, _MASKED_PHONE)
+                    except Exception:
+                        pass
+                else:
+                    walk(child)
+        elif isinstance(value, dict):
+            for key, child in value.items():
+                if key == "phone":
+                    value[key] = _MASKED_PHONE
+                else:
+                    walk(child)
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            for child in value:
+                walk(child)
+
+    walk(data)
+    return data
+
+
+def _sanitize_sensitive_result(request, result):
+    if isinstance(result, memoryview):
+        return b""
+    if isinstance(result, bytearray):
+        return bytearray()
+    if isinstance(result, bytes):
+        return b""
+    return _mask_phone_attributes(result)
 
 
 def _datetime_to_timestamp(dt):
