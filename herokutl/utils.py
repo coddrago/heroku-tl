@@ -196,6 +196,14 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
         # also not optional, we assume that this truly is the case.
         return types.InputPeerChannel(entity.id, entity.access_hash)
 
+    if isinstance(entity, types.Community):
+        if (entity.access_hash is not None and not entity.min) or not check_hash:
+            return types.InputPeerChannel(entity.id, entity.access_hash)
+        else:
+            raise TypeError("Community without access_hash or min info cannot be input")
+    if isinstance(entity, types.CommunityForbidden):
+        return types.InputPeerChannel(entity.id, entity.access_hash or 0)
+
     if isinstance(entity, types.InputUser):
         return types.InputPeerUser(entity.user_id, entity.access_hash)
 
