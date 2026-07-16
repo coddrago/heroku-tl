@@ -44,7 +44,7 @@ class EntityCache:
                     c.access_hash,
                     (
                         EntityType.MEGAGROUP
-                        if c.megagroup
+                        if getattr(c, "megagroup", None)
                         else (
                             EntityType.GIGAGROUP
                             if getattr(c, "gigagroup", None)

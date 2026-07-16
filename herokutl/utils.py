@@ -92,7 +92,15 @@ def get_display_name(entity):
             return ""
 
     elif isinstance(
-        entity, (types.Chat, types.ChatForbidden, types.Channel, types.ChannelForbidden)
+        entity,
+        (
+            types.Chat,
+            types.ChatForbidden,
+            types.Channel,
+            types.ChannelForbidden,
+            types.Community,
+            types.CommunityForbidden,
+        ),
     ):
         return entity.title
 
@@ -255,6 +263,9 @@ def get_input_channel(entity):
         _raise_cast_fail(entity, "InputChannel")
 
     if isinstance(entity, (types.Channel, types.ChannelForbidden)):
+        return types.InputChannel(entity.id, entity.access_hash or 0)
+
+    if isinstance(entity, (types.Community, types.CommunityForbidden)):
         return types.InputChannel(entity.id, entity.access_hash or 0)
 
     if isinstance(entity, types.InputPeerChannel):
