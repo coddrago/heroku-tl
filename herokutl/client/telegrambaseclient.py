@@ -26,6 +26,7 @@ from .._updates import (
     Entity,
     EntityType,
 )
+from .help import AppConfig
 
 try:
     import python_socks
@@ -414,8 +415,10 @@ class TelegramBaseClient(abc.ABC):
         self._updates_error = None
         self._updates_handle = None
         self._keepalive_handle = None
+        self._appconfig_handle = None
         self._last_request = time.time()
         self._no_updates = not receive_updates
+        self.appconfig = AppConfig(self)
 
         # Used for non-sequential updates, in order to terminate all pending tasks on disconnect.
         self._sequential_updates = sequential_updates
@@ -658,6 +661,7 @@ class TelegramBaseClient(abc.ABC):
 
         self._updates_handle = self.loop.create_task(self._update_loop())
         self._keepalive_handle = self.loop.create_task(self._keepalive_loop())
+        self._appconfig_handle = self.loop.create_task(self.appconfig._refresh_loop())
 
     def is_connected(self: "TelegramClient") -> bool:
         """
@@ -811,6 +815,7 @@ class TelegramBaseClient(abc.ABC):
             self._log[__name__],
             updates_handle=self._updates_handle,
             keepalive_handle=self._keepalive_handle,
+            appconfig_handle=self._appconfig_handle,
         )
 
     async def _switch_dc(self: "TelegramClient", new_dc):
