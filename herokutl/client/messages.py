@@ -6,7 +6,7 @@ import warnings
 from .. import helpers, utils, errors, hints, extensions
 from ..tl.tlobject import RESTRICT_IDS
 from ..requestiter import RequestIter
-from ..tl import types, functions
+from ..tl import custom, types, functions
 
 _MAX_CHUNK_SIZE = 100
 
@@ -1683,15 +1683,49 @@ class MessageMethods:
         reaction: "typing.Optional[hints.Reaction]" = None,
         big: bool = False,
         add_to_recent: bool = False,
+        keep_existing: bool = False,
     ):
-        reaction = utils.convert_reaction(reaction)
+        if reaction is None:
+            reaction = []
+        elif not isinstance(reaction, (list, tuple, set)):
+            reaction = [reaction]
+        else:
+            reaction = [r for r in reaction if r is not None]
+
+        reaction = utils.convert_reaction(reaction) or []
+
+        if keep_existing and isinstance(message, custom.Message):
+            if (r := message.reactions) and r.results:
+                reaction = [
+                    rc.reaction
+                    for rc in sorted(
+                        (rc for rc in r.results if rc.chosen_order is not None),
+                        key=lambda rc: rc.chosen_order,
+                    )
+                ] + reaction
+
+        seen = set()
+        _result = []
+        for rc in reversed(reaction):
+            key = (
+                type(rc).__name__,
+                getattr(rc, "emoticon", None) or getattr(rc, "document_id", None),
+            )
+            if key not in seen:
+                seen.add(key)
+                _result.append(rc)
+        reaction = _result[::-1]
+
+        me = self.heroku_me
+        cfg = await self.appconfig
+        reactions_limit = int(
+            cfg.get("reactions_user_max_premium", 3)
+            if me.premium
+            else cfg.get("reactions_user_max_default", 1) if not me.bot else 1
+        )
+        reaction = reaction[-reactions_limit:]
+
         message = utils.get_message_id(message) or 0
-        if not reaction:
-            get_default_request = functions.help.GetAppConfigRequest()
-            app_config = await self(get_default_request)
-            reaction = (
-                next((y for y in app_config.value if "reactions_default" in y.key))
-            ).value.value
 
         request = functions.messages.SendReactionRequest(
             big=big,

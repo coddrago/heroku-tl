@@ -1301,6 +1301,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         reaction: "typing.Optional[hints.Reaction]" = None,  # type: ignore
         big: bool = False,
         add_to_recent: bool = False,
+        keep_existing: bool = False,
     ):
         """
         Reacts on the given message. Shorthand for
@@ -1310,10 +1311,11 @@ class Message(ChatGetter, SenderGetter, TLObject):
         if self._client:
             return await self._client.send_reaction(
                 await self.get_input_chat(),
-                self.id,
+                self,
                 reaction,
                 big=big,
                 add_to_recent=add_to_recent,
+                keep_existing=keep_existing,
             )
 
     async def link(  # skip merge
