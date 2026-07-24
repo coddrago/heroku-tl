@@ -849,7 +849,7 @@ class ChatMethods:
                 raise ValueError('No such action "{}"'.format(action)) from None
         elif (
             not isinstance(action, types.TLObject)
-            or action.SUBCLASS_OF_ID != 0x20B2CC21
+            or action.SUBCLASS_OF_ID != 0x20b2cc21
         ):
             # 0x20b2cc21 = crc32(b'SendMessageAction')
             if isinstance(action, type):
@@ -997,7 +997,7 @@ class ChatMethods:
                 # TODO get rid of this once sessions cache this information
                 if entity.channel_id not in self._megagroup_cache:
                     full_entity = await self.get_entity(entity)
-                    self._megagroup_cache[entity.channel_id] = full_entity.megagroup
+                    self._megagroup_cache[entity.channel_id] = getattr(full_entity, 'megagroup', False)
 
                 if self._megagroup_cache[entity.channel_id]:
                     post_messages = None
@@ -1299,7 +1299,7 @@ class ChatMethods:
         entity = await self.get_entity(entity)
 
         if not user:
-            if isinstance(entity, types.Channel):
+            if isinstance(entity, (types.Channel, types.Community)):
                 FullChat = await self(functions.channels.GetFullChannelRequest(entity))
             elif isinstance(entity, types.Chat):
                 FullChat = await self(functions.messages.GetFullChatRequest(entity.id))

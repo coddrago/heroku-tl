@@ -14,6 +14,7 @@ import os
 import pathlib
 import re
 import struct
+import warnings
 from collections import namedtuple
 from mimetypes import guess_extension
 from types import GeneratorType
@@ -205,12 +206,14 @@ def get_input_peer(entity, allow_self=True, check_hash=True):
         return types.InputPeerChannel(entity.id, entity.access_hash)
 
     if isinstance(entity, types.Community):
+        # Communities are addressed via InputChannel/InputPeerChannel
+        # everywhere in the schema, same as a regular Channel.
         if (entity.access_hash is not None and not entity.min) or not check_hash:
             return types.InputPeerChannel(entity.id, entity.access_hash)
         else:
             raise TypeError("Community without access_hash or min info cannot be input")
     if isinstance(entity, types.CommunityForbidden):
-        return types.InputPeerChannel(entity.id, entity.access_hash or 0)
+        return types.InputPeerChannel(entity.id, entity.access_hash)
 
     if isinstance(entity, types.InputUser):
         return types.InputPeerUser(entity.user_id, entity.access_hash)
@@ -262,7 +265,15 @@ def get_input_channel(entity):
     except AttributeError:
         _raise_cast_fail(entity, "InputChannel")
 
-    if isinstance(entity, (types.Channel, types.ChannelForbidden)):
+    if isinstance(
+        entity,
+        (
+            types.Channel,
+            types.ChannelForbidden,
+            types.Community,
+            types.CommunityForbidden,
+        ),
+    ):
         return types.InputChannel(entity.id, entity.access_hash or 0)
 
     if isinstance(entity, (types.Community, types.CommunityForbidden)):
@@ -391,16 +402,22 @@ def get_input_photo(photo):
     if isinstance(photo, types.messages.ChatFull):
         photo = photo.full_chat
 
-    if isinstance(photo, types.ChannelFull):
+    if isinstance(photo, (types.ChannelFull, types.CommunityFull)):
         return get_input_photo(photo.chat_photo)
     elif isinstance(photo, types.UserFull):
         return get_input_photo(photo.profile_photo)
-    elif isinstance(photo, (types.Channel, types.Chat, types.User)):
+    elif isinstance(photo, (types.Channel, types.Chat, types.User, types.Community)):
         return get_input_photo(photo.photo)
 
     if isinstance(
         photo,
-        (types.UserEmpty, types.ChatEmpty, types.ChatForbidden, types.ChannelForbidden),
+        (
+            types.UserEmpty,
+            types.ChatEmpty,
+            types.ChatForbidden,
+            types.ChannelForbidden,
+            types.CommunityForbidden,
+        ),
     ):
         return types.InputPhotoEmpty()
 
@@ -1043,7 +1060,7 @@ def get_peer(peer):
             ),
         ):
             return peer.peer
-        elif isinstance(peer, types.ChannelFull):
+        elif isinstance(peer, (types.ChannelFull, types.CommunityFull)):
             return types.PeerChannel(peer.id)
         elif isinstance(peer, types.UserEmpty):
             return types.PeerUser(peer.id)

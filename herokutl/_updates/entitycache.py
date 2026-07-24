@@ -1,4 +1,5 @@
 from .session import EntityType, Entity
+from ..tl import types
 
 _sentinel = object()
 
@@ -43,12 +44,16 @@ class EntityCache:
                 (
                     c.access_hash,
                     (
-                        EntityType.MEGAGROUP
-                        if getattr(c, "megagroup", None)
+                        EntityType.COMMUNITY
+                        if isinstance(c, types.Community)
                         else (
-                            EntityType.GIGAGROUP
-                            if getattr(c, "gigagroup", None)
-                            else EntityType.CHANNEL
+                            EntityType.MEGAGROUP
+                            if getattr(c, "megagroup", None)
+                            else (
+                                EntityType.GIGAGROUP
+                                if getattr(c, "gigagroup", None)
+                                else EntityType.CHANNEL
+                            )
                         )
                     ),
                 ),

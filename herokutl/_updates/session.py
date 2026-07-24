@@ -79,6 +79,7 @@ class EntityType(IntEnum):
     * 'C' (67): this entity belongs to a standard broadcast :tl:`Channel`.
     * 'M' (77): this entity belongs to a megagroup :tl:`Channel`.
     * 'E' (69): this entity belongs to an "enormous" "gigagroup" :tl:`Channel`.
+    * 'N' (78): this entity belongs to a :tl:`Community`.
     """
 
     USER = ord("U")
@@ -87,6 +88,7 @@ class EntityType(IntEnum):
     CHANNEL = ord("C")
     MEGAGROUP = ord("M")
     GIGAGROUP = ord("E")
+    COMMUNITY = ord('N')
 
     def canonical(self):
         """
@@ -102,6 +104,7 @@ _canon_entity_types = {
     EntityType.CHANNEL: EntityType.CHANNEL,
     EntityType.MEGAGROUP: EntityType.CHANNEL,
     EntityType.GIGAGROUP: EntityType.CHANNEL,
+    EntityType.COMMUNITY: EntityType.COMMUNITY,
 }
 
 
