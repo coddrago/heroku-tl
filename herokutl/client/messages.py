@@ -975,6 +975,21 @@ class MessageMethods:
 
         result = await self(request)
         if isinstance(result, types.UpdateShortSentMessage):
+            reply_to = request.reply_to
+            if isinstance(reply_to, types.InputReplyToMessage):
+                # UpdateShortSentMessage carries no reply header, so keep
+                # Message.reply_to in its documented MessageReplyHeader type
+                # instead of leaking the InputReplyToMessage from the request
+                reply_to = types.MessageReplyHeader(
+                    reply_to_msg_id=reply_to.reply_to_msg_id,
+                    reply_to_top_id=reply_to.top_msg_id,
+                    forum_topic=reply_to.top_msg_id is not None,
+                    quote_text=reply_to.quote_text,
+                    quote_entities=reply_to.quote_entities,
+                    quote_offset=reply_to.quote_offset,
+                    todo_item_id=reply_to.todo_item_id,
+                    poll_option=reply_to.poll_option,
+                )
             message = types.Message(
                 id=result.id,
                 peer_id=await self._get_peer(entity),
@@ -986,7 +1001,7 @@ class MessageMethods:
                 entities=result.entities,
                 reply_markup=request.reply_markup,
                 ttl_period=result.ttl_period,
-                reply_to=request.reply_to,
+                reply_to=reply_to,
             )
             message._finish_init(self, {}, entity)
             return message
