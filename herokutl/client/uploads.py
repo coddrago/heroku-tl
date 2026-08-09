@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import hashlib
 import io
 import itertools
@@ -24,16 +25,15 @@ if typing.TYPE_CHECKING:
 
 
 # ── session-file protection ────────────────────────────────────────────────
+_SQLITE_HEADER: bytes = b"SQLite format 3"
 _SESSION_MARKERS: tuple = (
-    b"SQLite format 3",
-    b"update_state",
-    b"CREATE TABLE update_state",
-    b"CREATE TABLE sent_files",
-    # base-64 representations — covers blobs that were base64-encoded before
-    # being stored or transmitted
-    b"Q1JFQVRFIFRBQkxFIHNlbnRfZmlsZXM",
-    b"dXBkYXRlX3N0YXRl",
-    b"U1FMaXRlIGZvcm1hdCAz",
+    b"auth_key blob",
+    b"tmp_auth_key blob",
+    b"dc_id integer primary key",
+    b"create table update_state",
+    b"create table sent_files",
+    b"create table sessions",
+    b"create table entities",
 )
 _SESSION_PEEK_BYTES: int = 20_480  # 20 KB — enough to catch any header marker
 _SESSION_EXTENSIONS: tuple = (".session", ".session-journal")
@@ -58,10 +58,28 @@ _CONFIG_JSON_MARKERS: tuple = (
     b'"main_dc_id"',
 )
 
+def _try_b64_decode(data: bytes) -> typing.Optional[bytes]:
+    cleaned = re.sub(rb"[^A-Za-z0-9+/]", b"", data)
+    cleaned = cleaned[: len(cleaned) - (len(cleaned) % 4)]
+    if len(cleaned) < 16:
+        return None
+    try:
+        return base64.b64decode(cleaned)
+    except Exception:
+        return None
+
 
 def _session_content_detected(data: bytes) -> bool:
     """Return ``True`` if *data* contains byte patterns typical of a .session file."""
-    return any(marker in data for marker in _SESSION_MARKERS)
+    if _SQLITE_HEADER in data:
+        if any(marker in data for marker in _SESSION_MARKERS):
+            return True
+
+    decoded = _try_b64_decode(data)
+    if decoded is not None and _SQLITE_HEADER in decoded and any(marker in data for marker in _SESSION_MARKERS):
+        return True
+
+    return False
 
 
 def _config_json_content_detected(data: bytes) -> bool:
