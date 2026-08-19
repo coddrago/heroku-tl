@@ -67,8 +67,8 @@ class SQLiteSession(MemorySession):
                     self._server_address,
                     self._port,
                     key,
-                    tmp_key,
                     self._takeout_id,
+                    tmp_key,
                 ) = tuple_
                 self._auth_key = AuthKey(data=key)
                 self._tmp_auth_key = AuthKey(data=tmp_key)
