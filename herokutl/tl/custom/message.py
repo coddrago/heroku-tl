@@ -1021,7 +1021,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
 
             share_phone (`bool` | `str` | tl:`InputMediaContact`):
                 When clicking on a keyboard button requesting a phone number
-                (:tl:`KeyboardButtonRequestPhone`), this argument must be
+                (:tl:`ButtonTypeRequestPhone`), this argument must be
                 explicitly set to avoid accidentally sharing the number.
 
                 It can be `True` to automatically share the current user's
@@ -1032,7 +1032,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
 
             share_geo (`tuple` | `list` | tl:`InputMediaGeoPoint`):
                 When clicking on a keyboard button requesting a geo location
-                (:tl:`KeyboardButtonRequestGeoLocation`), this argument must
+                (:tl:`ButtonTypeRequestGeoLocation`), this argument must
                 be explicitly set to avoid accidentally sharing the location.
 
                 It must be a `tuple` of `float` as ``(longitude, latitude)``,
@@ -1048,7 +1048,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
                 `teltehon.errors.PasswordHashInvalidError` is raised.
 
             open_url (`bool`):
-                When clicking on an inline keyboard URL button :tl:`KeyboardButtonUrl`
+                When clicking on an inline keyboard URL button :tl:`InlineButtonTypeUrl`
                 By default it will return URL of the button, passing ``click(open_url=True)``
                 will lunch the default browser with given URL of the button and
                 return `True` on success.
@@ -1080,7 +1080,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
             if not chat:
                 return None
 
-            but = types.KeyboardButtonCallback("", data)
+            but = types.KeyboardInlineButton("", types.InlineButtonTypeCallback(data))
             return await MessageButton(self._client, but, chat, None, self.id).click(
                 share_phone=share_phone,
                 share_geo=share_geo,
@@ -1256,7 +1256,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
         """
         Returns the input peer of the bot that's needed for the reply markup.
 
-        This is necessary for :tl:`KeyboardButtonSwitchInline` since we need
+        This is necessary for :tl:`InlineButtonTypeSwitchInline` since we need
         to know what bot we want to start. Raises ``ValueError`` if the bot
         cannot be found but is needed. Returns `None` if it's not needed.
         """
@@ -1267,7 +1267,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
 
         for row in self.reply_markup.rows:
             for button in row.buttons:
-                if isinstance(button, types.KeyboardButtonSwitchInline):
+                if isinstance(button.type, types.InlineButtonTypeSwitchInline):
                     # no via_bot_id means the bot sent the message itself (#1619)
                     if button.same_peer or not self.via_bot_id:
                         bot = self.input_sender

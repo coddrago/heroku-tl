@@ -46,7 +46,7 @@ class InlineBuilder:
         game (`bool`, optional):
             May be `True` to indicate that the game will be sent.
 
-        buttons (`list`, `custom.Button <telethon.tl.custom.button.Button>`, :tl:`KeyboardButton`, optional):
+        buttons (`list`, `custom.Button <telethon.tl.custom.button.Button>`, :tl:`KeyboardInlineButton`, optional):
             Same as ``buttons`` for `client.send_message()
             <telethon.client.messages.MessageMethods.send_message>`.
 

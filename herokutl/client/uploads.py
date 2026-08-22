@@ -452,7 +452,7 @@ class UploadMethods:
                 If `True` the video will be sent as a video note,
                 also known as a round video message.
 
-            buttons (`list`, `custom.Button <telethon.tl.custom.button.Button>`, :tl:`KeyboardButton`):
+            buttons (`list`, `custom.Button <telethon.tl.custom.button.Button>`, :tl:`KeyboardButton`, :tl:`KeyboardInlineButton`):
                 The matrix (list of lists), row list or button to be shown
                 after sending the message. This parameter will only work if
                 you have signed in as a bot. You can also pass your own
