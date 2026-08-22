@@ -122,7 +122,7 @@ class MessageButton:
         elif isinstance(self.button.type, types.InlineButtonTypeSwitchInline):
             return await self._client(
                 functions.messages.StartBotRequest(
-                    bot=self._bot, peer=self._chat, start_param=self.button.query
+                    bot=self._bot, peer=self._chat, start_param=self.button.type.query
                 )
             )
         elif isinstance(self.button.type, types.InlineButtonTypeUrl):

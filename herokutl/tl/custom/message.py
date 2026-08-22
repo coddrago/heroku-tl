@@ -1269,7 +1269,7 @@ class Message(ChatGetter, SenderGetter, TLObject):
             for button in row.buttons:
                 if isinstance(button.type, types.InlineButtonTypeSwitchInline):
                     # no via_bot_id means the bot sent the message itself (#1619)
-                    if button.same_peer or not self.via_bot_id:
+                    if button.type.same_peer or not self.via_bot_id:
                         bot = self.input_sender
                         if not bot:
                             raise ValueError("No input sender")
