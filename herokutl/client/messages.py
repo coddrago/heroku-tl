@@ -1348,8 +1348,8 @@ class MessageMethods:
             # Otherwise, Telegram will error with `MESSAGE_ID_INVALID` and do nothing.
             exported = self.session.dc_id != entity.dc_id
             if exported:
+                sender = await self._borrow_exported_sender(entity.dc_id)
                 try:
-                    sender = await self._borrow_exported_sender(entity.dc_id)
                     return await self._call(sender, request)
                 finally:
                     await self._return_exported_sender(sender)
