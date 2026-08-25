@@ -705,9 +705,10 @@ class MessageMethods:
                 and you should slice them manually if the text to send is
                 longer than said length.
 
-            reply_to (`int` | `Message <telethon.tl.custom.message.Message>`, optional):
+            reply_to (`int` | `Message <telethon.tl.custom.message.Message>` | :tl:`InputReplyTo`, optional):
                 Whether to reply to a message or not. If an integer is provided,
                 it should be the ID of the message that it should reply to.
+                A pre-built :tl:`InputReplyTo` is passed through as-is
 
             attributes (`list`, optional):
                 Optional attributes that override the inferred ones, like
@@ -896,8 +897,14 @@ class MessageMethods:
         entity = await self.get_input_entity(entity)
         if comment_to is not None:
             entity, reply_to = await self._get_comment_data(entity, comment_to)
-        else:
+        elif getattr(reply_to, "SUBCLASS_OF_ID", None) != 0x8C71131D:
             reply_to = utils.get_message_id(reply_to)
+
+        input_reply_to = (
+            reply_to
+            if reply_to is None or getattr(reply_to, "SUBCLASS_OF_ID", None) == 0x8C71131D
+            else types.InputReplyToMessage(reply_to)
+        )
 
         if isinstance(message, types.Message):
             if buttons is None:
@@ -932,9 +939,7 @@ class MessageMethods:
                 message=message.message or "",
                 silent=silent,
                 background=background,
-                reply_to=(
-                    None if reply_to is None else types.InputReplyToMessage(reply_to)
-                ),
+                reply_to=input_reply_to,
                 reply_markup=markup,
                 entities=message.entities,
                 clear_draft=clear_draft,
@@ -960,9 +965,7 @@ class MessageMethods:
                 message=message,
                 entities=formatting_entities,
                 no_webpage=not link_preview,
-                reply_to=(
-                    None if reply_to is None else types.InputReplyToMessage(reply_to)
-                ),
+                reply_to=input_reply_to,
                 clear_draft=clear_draft,
                 silent=silent,
                 background=background,
