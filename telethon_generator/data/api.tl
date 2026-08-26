@@ -211,6 +211,7 @@ messageActionNoForwardsRequest#3e2793ba flags:# expired:flags.0?true prev_value:
 messageActionPollAppendAnswer#9da1cd6c answer:PollAnswer = MessageAction;
 messageActionPollDeleteAnswer#399674dc answer:PollAnswer = MessageAction;
 messageActionManagedBotCreated#16605e3e bot_id:long = MessageAction;
+messageActionChangeCommunity#5d20bae8 flags:# community_id:flags.0?long = MessageAction;
 messageActionChatJoinedViaCommunity#4a8bfe80 community_id:long = MessageAction;
 
 dialog#fc89f7f3 flags:# pinned:flags.2?true unread_mark:flags.3?true view_forum_as_messages:flags.6?true peer:Peer top_message:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int unread_mentions_count:int unread_reactions_count:int unread_poll_votes_count:int notify_settings:PeerNotifySettings pts:flags.0?int draft:flags.1?DraftMessage folder_id:flags.4?int ttl_period:flags.5?int = Dialog;
