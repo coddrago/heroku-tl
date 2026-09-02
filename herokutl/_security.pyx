@@ -57,7 +57,7 @@ cdef class SecurityGate:
     that would reintroduce a mutable attribute surface."""
 
     @staticmethod
-    def check_constructor(unsigned long constructor_id, str type_name):
+    def check_constructor(unsigned int constructor_id, str type_name):
         if constructor_id in FORBIDDEN_CONSTRUCTORS:
             raise SecurityViolation(
                 f"Usage of {type_name} is forbidden due to its CONSTRUCTOR_ID."
@@ -66,11 +66,16 @@ cdef class SecurityGate:
     @staticmethod
     def check_serialized(data):
         cdef Py_ssize_t i, n
-        cdef unsigned long cid
+        cdef unsigned int cid
         cdef const unsigned char[:] buf = data
         n = len(data)
         for i in range(0, n - 3, 4):
-            cid = buf[i] | (buf[i + 1] << 8) | (buf[i + 2] << 16) | (buf[i + 3] << 24)
+            cid = (
+                (<unsigned int> buf[i])
+                | (<unsigned int> buf[i + 1] << 8)
+                | (<unsigned int> buf[i + 2] << 16)
+                | (<unsigned int> buf[i + 3] << 24)
+            )
             if cid in FORBIDDEN_CONSTRUCTORS:
                 raise SecurityViolation(
                     "Usage of a forbidden raw TL constructor is forbidden."
