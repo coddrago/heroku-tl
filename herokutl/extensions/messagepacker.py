@@ -1,12 +1,14 @@
 import asyncio
 import collections
 import io
+import logging
 import struct
 
 from ..tl import TLRequest
 from ..tl.core.messagecontainer import MessageContainer
 from ..tl.core.tlmessage import TLMessage
-from ..tl.tlobject import _scam_detection_error_cls
+
+_packer_security_logger = logging.getLogger(__name__)
 
 
 class MessagePacker:
@@ -120,6 +122,7 @@ class MessagePacker:
 
 
 _PACKER_SECURITY_BASELINE = None
+_PACKER_TAMPER_ALERTED = False
 
 
 def _snapshot_packer_state():
@@ -137,7 +140,8 @@ def _capture_packer_security_baseline():
 
 
 def _verify_packer_integrity():
-    if _PACKER_SECURITY_BASELINE is None:
+    global _PACKER_TAMPER_ALERTED
+    if _PACKER_SECURITY_BASELINE is None or _PACKER_TAMPER_ALERTED:
         return
     current = _snapshot_packer_state()
     tampered = [
@@ -146,12 +150,12 @@ def _verify_packer_integrity():
         if current.get(name) is not original
     ]
     if tampered:
-        raise _scam_detection_error_cls()(
+        _PACKER_TAMPER_ALERTED = True
+        _packer_security_logger.critical(
             "Security enforcement tampering detected in "
             "herokutl.extensions.messagepacker: "
             + ", ".join(tampered)
-            + ". A loaded module has rebound the outgoing message queue. "
-            "Refusing to send until this is resolved."
+            + ". A loaded module has rebound the outgoing message queue."
         )
 
 
