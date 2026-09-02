@@ -6,6 +6,7 @@ import struct
 from ..tl import TLRequest
 from ..tl.core.messagecontainer import MessageContainer
 from ..tl.core.tlmessage import TLMessage
+from ..tl.tlobject import _scam_detection_error_cls
 
 
 class MessagePacker:
@@ -43,6 +44,7 @@ class MessagePacker:
         If the cancellation occurs or only invalid items were in the
         queue, (None, None) will be returned instead.
         """
+        _verify_packer_integrity()
         if not self._deque:
             self._ready.clear()
             await self._ready.wait()
@@ -115,3 +117,42 @@ class MessagePacker:
 
         data = buffer.getvalue()
         return batch, data
+
+
+_PACKER_SECURITY_BASELINE = None
+
+
+def _snapshot_packer_state():
+    return {
+        "MessagePacker.append": vars(MessagePacker).get("append"),
+        "MessagePacker.extend": vars(MessagePacker).get("extend"),
+        "MessagePacker.get": vars(MessagePacker).get("get"),
+    }
+
+
+def _capture_packer_security_baseline():
+    global _PACKER_SECURITY_BASELINE
+    if _PACKER_SECURITY_BASELINE is None:
+        _PACKER_SECURITY_BASELINE = _snapshot_packer_state()
+
+
+def _verify_packer_integrity():
+    if _PACKER_SECURITY_BASELINE is None:
+        return
+    current = _snapshot_packer_state()
+    tampered = [
+        name
+        for name, original in _PACKER_SECURITY_BASELINE.items()
+        if current.get(name) is not original
+    ]
+    if tampered:
+        raise _scam_detection_error_cls()(
+            "Security enforcement tampering detected in "
+            "herokutl.extensions.messagepacker: "
+            + ", ".join(tampered)
+            + ". A loaded module has rebound the outgoing message queue. "
+            "Refusing to send until this is resolved."
+        )
+
+
+_capture_packer_security_baseline()

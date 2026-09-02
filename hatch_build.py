@@ -38,6 +38,35 @@ TLOBJECT_IN_TLS = [Path(x) for x in GENERATOR_DIR.glob("data/*.tl")]
 TLOBJECT_OUT = LIBRARY_DIR / "tl"
 IMPORT_DEPTH = 2
 
+SECURITY_EXT_SOURCE = LIBRARY_DIR / "_security.pyx"
+
+
+def _build_security_extension(root: Path) -> Path:
+    from Cython.Build import cythonize
+    from setuptools import Extension
+    from setuptools.dist import Distribution
+
+    source = root / SECURITY_EXT_SOURCE
+    ext = Extension("herokutl._security", [str(source)])
+    dist = Distribution(
+        {"ext_modules": cythonize([ext], language_level=3, quiet=True)}
+    )
+    dist.script_args = ["build_ext", "--inplace"]
+    dist.parse_command_line()
+    dist.run_commands()
+
+    src_dir = root / LIBRARY_DIR
+    compiled = sorted(src_dir.glob("_security*.pyd")) + sorted(
+        src_dir.glob("_security*.so")
+    )
+    if not compiled:
+        raise RuntimeError(
+            "Failed to build herokutl._security: no compiled extension "
+            "found after running build_ext. Is a C compiler and Cython "
+            "available?"
+        )
+    return compiled[0]
+
 
 class CustomBuildHook(BuildHookInterface):
     def _root(self) -> Path:
@@ -66,6 +95,11 @@ class CustomBuildHook(BuildHookInterface):
 
         if build_dir != root and generated_package.is_dir():
             shutil.rmtree(generated_package)
+
+        src_dir = root / LIBRARY_DIR
+        for pattern in ("_security*.pyd", "_security*.so", "_security.c"):
+            for stale in src_dir.glob(pattern):
+                stale.unlink()
 
     def clean(self, versions: list[str]) -> None:
         if self.root not in sys.path:
@@ -126,6 +160,13 @@ class CustomBuildHook(BuildHookInterface):
             TLOBJECT_OUT / "alltlobjects.py"
         )
         build_data["force_include"][str(generated_errors)] = str(ERRORS_OUT)
+
+        compiled_ext = _build_security_extension(root)
+        build_data["force_include"][str(compiled_ext)] = str(
+            LIBRARY_DIR / compiled_ext.name
+        )
+        build_data["infer_tag"] = True
+        build_data["pure_python"] = False
 
     def finalize(
         self, version: str, build_data: dict[str, Any], artifact_path: str

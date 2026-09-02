@@ -1,6 +1,11 @@
 import asyncio
 
-from ..tl.tlobject import _raise_if_forbidden_serialized_request
+from .._security import SecurityGate, SecurityViolation
+from ..tl.tlobject import (
+    _raise_if_forbidden_serialized_request,
+    _scam_detection_error_cls,
+    _verify_security_integrity,
+)
 
 
 class RequestState:
@@ -18,6 +23,11 @@ class RequestState:
         self.msg_id = None
         self.request = request
         self.data = bytes(request)
+        try:
+            SecurityGate.check_serialized(self.data)
+        except SecurityViolation as e:
+            raise _scam_detection_error_cls()(str(e)) from None
+        _verify_security_integrity()
         _raise_if_forbidden_serialized_request(request, self.data)
         self.future = asyncio.Future()
         self.after = after

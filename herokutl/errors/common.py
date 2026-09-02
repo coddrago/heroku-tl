@@ -4,6 +4,7 @@ import struct
 import textwrap
 
 from ..tl import TLRequest
+from .._security import SecurityViolation
 
 
 class ReadCancelledError(Exception):
@@ -176,7 +177,7 @@ class MultiError(Exception):
         return self
 
 
-class ScamDetectionError(Exception):
+class ScamDetectionError(SecurityViolation):
     """Exception for scam detection"""
 
     def __init__(self, error_message: str):
