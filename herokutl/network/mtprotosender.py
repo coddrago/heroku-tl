@@ -8,11 +8,12 @@ import time
 from typing import Any
 
 from . import authenticator
+from .._security import SecurityGate, SecurityViolation
 from ..extensions.messagepacker import MessagePacker
 from .mtprotoplainsender import MTProtoPlainSender
 from .requeststate import RequestState
 from .mtprotostate import MTProtoState
-from ..tl.tlobject import TLRequest, _sanitize_sensitive_result
+from ..tl.tlobject import TLRequest, _sanitize_sensitive_result, _scam_detection_error_cls
 from .. import helpers, utils
 from ..errors import (
     BadMessageError,
@@ -533,6 +534,21 @@ class MTProtoSender:
             batch, data = await self._send_queue.get()
 
             if not data:
+                continue
+
+            try:
+                SecurityGate.check_serialized(data)
+            except SecurityViolation as e:
+                violation = _scam_detection_error_cls()(str(e))
+                self._log.critical(
+                    "Refused to send a batch of %d message(s): %s",
+                    len(batch),
+                    violation,
+                )
+                for state in batch:
+                    for s in state if isinstance(state, list) else (state,):
+                        if s.future is not None and not s.future.done():
+                            s.future.set_exception(violation)
                 continue
 
             self._log.debug(
