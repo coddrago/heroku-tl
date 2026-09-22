@@ -3,7 +3,6 @@ Simple HTML -> Telegram entity parser.
 """
 
 import re
-import struct
 import datetime
 from collections import deque
 from html import escape
@@ -31,20 +30,8 @@ from ..tl.types import (
 )
 
 
-# Helpers from markdown.py
-def _add_surrogate(text):
-    return "".join(
-        (
-            "".join(chr(y) for y in struct.unpack("<HH", x.encode("utf-16le")))
-            if (0x10000 <= ord(x) <= 0x10FFFF)
-            else x
-        )
-        for x in text
-    )
-
-
-def _del_surrogate(text):
-    return text.encode("utf-16", "surrogatepass").decode("utf-16")
+_add_surrogate = helpers.add_surrogate
+_del_surrogate = helpers.del_surrogate
 
 
 class HTMLToTelegramParser(HTMLParser):

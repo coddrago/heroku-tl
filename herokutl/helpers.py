@@ -8,6 +8,7 @@ import struct
 import inspect
 import logging
 import functools
+import re
 import sys
 from pathlib import Path
 from hashlib import sha1
@@ -37,17 +38,16 @@ def ensure_parent_dir_exists(file_path):
         os.makedirs(parent, exist_ok=True)
 
 
+_SMP_PATTERN = re.compile(r"[\U00010000-\U0010ffff]")
+
+
+def _surrogate_pair(match):
+    value = ord(match.group(0)) - 0x10000
+    return chr(0xD800 + (value >> 10)) + chr(0xDC00 + (value & 0x3FF))
+
+
 def add_surrogate(text):
-    return "".join(
-        # SMP -> Surrogate Pairs (Telegram offsets are calculated with these).
-        # See https://en.wikipedia.org/wiki/Plane_(Unicode)#Overview for more.
-        (
-            "".join(chr(y) for y in struct.unpack("<HH", x.encode("utf-16le")))
-            if (0x10000 <= ord(x) <= 0x10FFFF)
-            else x
-        )
-        for x in text
-    )
+    return _SMP_PATTERN.sub(_surrogate_pair, text)
 
 
 def del_surrogate(text):

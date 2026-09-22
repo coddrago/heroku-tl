@@ -104,5 +104,6 @@ class TestMessageMethods:
                 nosound_video=None,
                 send_as=None,
                 message_effect_id=None,
+                invert_media=False,
             )
             assert result == expected_result

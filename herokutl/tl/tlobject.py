@@ -20,6 +20,8 @@ _USERS_GET_USERS_CONSTRUCTOR_ID = 0x0D91A548
 _INPUT_USER_SELF_CONSTRUCTOR_ID = 0xF7C1B13F
 _GENERATED_FUNCTIONS_MODULE_PREFIX = "herokutl.tl.functions"
 _MASKED_PHONE = "phone?"
+_GET_USERS_BYTES = struct.pack("<I", _USERS_GET_USERS_CONSTRUCTOR_ID)
+_INPUT_USER_SELF_BYTES = struct.pack("<I", _INPUT_USER_SELF_CONSTRUCTOR_ID)
 FORBIDDEN_WEBAPP_IDS = [1985737506, 1559501630]
 
 DUMMY_MESSAGE_KWARGS = {
@@ -82,12 +84,19 @@ def _serialized_get_users_targets_self(data, offset):
         # The peer is nested and variable-sized, so keep scanning the rest of the
         # serialized request instead of trying to partially deserialize it here.
         else:
-            return any(
-                _read_uint(data, i) == _INPUT_USER_SELF_CONSTRUCTOR_ID
-                for i in range(offset + 4, len(data) - 3, 4)
-            )
+            return next(
+                _aligned_matches(data, _INPUT_USER_SELF_BYTES, offset + 4), None
+            ) is not None
 
     return False
+
+
+def _aligned_matches(data, pattern, start=0):
+    offset = data.find(pattern, start)
+    while offset != -1:
+        if offset % 4 == 0:
+            yield offset
+        offset = data.find(pattern, offset + 1)
 
 
 def _serialized_request_gets_self_user(data):
@@ -96,9 +105,8 @@ def _serialized_request_gets_self_user(data):
 
     data = bytes(data)
     return any(
-        _read_uint(data, offset) == _USERS_GET_USERS_CONSTRUCTOR_ID
-        and _serialized_get_users_targets_self(data, offset)
-        for offset in range(0, len(data) - 3, 4)
+        _serialized_get_users_targets_self(data, offset)
+        for offset in _aligned_matches(data, _GET_USERS_BYTES)
     )
 
 
