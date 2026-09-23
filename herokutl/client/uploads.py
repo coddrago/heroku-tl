@@ -36,7 +36,7 @@ _SESSION_MARKERS: tuple = (
     b"create table entities",
 )
 _SESSION_PEEK_BYTES: int = 20_480  # 20 KB — enough to catch any header marker
-_SESSION_EXTENSIONS: tuple = (".session", ".session-journal")
+_SESSION_EXTENSIONS: tuple = (".session", ".session-journal", ".session-wal", ".session-shm")
 
 
 # ── config-<id>.json protection ──────────────────────────────────────────
@@ -59,12 +59,14 @@ _CONFIG_JSON_MARKERS: tuple = (
 )
 
 def _try_b64_decode(data: bytes) -> typing.Optional[bytes]:
-    cleaned = re.sub(rb"[^A-Za-z0-9+/]", b"", data)
+    cleaned = re.sub(rb"\s+", b"", data)
+    if not re.fullmatch(rb"[A-Za-z0-9+/_-]*={0,2}", cleaned):
+        return None
     cleaned = cleaned[: len(cleaned) - (len(cleaned) % 4)]
     if len(cleaned) < 16:
         return None
     try:
-        return base64.b64decode(cleaned)
+        return base64.b64decode(cleaned, altchars=b"-_")
     except Exception:
         return None
 
@@ -72,11 +74,11 @@ def _try_b64_decode(data: bytes) -> typing.Optional[bytes]:
 def _session_content_detected(data: bytes) -> bool:
     """Return ``True`` if *data* contains byte patterns typical of a .session file."""
     if _SQLITE_HEADER in data:
-        if any(marker in data for marker in _SESSION_MARKERS):
+        if any(marker in data.lower() for marker in _SESSION_MARKERS):
             return True
 
     decoded = _try_b64_decode(data)
-    if decoded is not None and _SQLITE_HEADER in decoded and any(marker in data for marker in _SESSION_MARKERS):
+    if decoded is not None and _SQLITE_HEADER in decoded and any(marker in decoded.lower() for marker in _SESSION_MARKERS):
         return True
 
     return False
@@ -94,6 +96,7 @@ def _is_sensitive_name(name: str) -> bool:
     """
     if not name:
         return False
+    name = str(name).casefold()
     if any(name.endswith(ext) for ext in _SESSION_EXTENSIONS):
         return True
     return bool(_CONFIG_JSON_RE.search(name))
@@ -135,41 +138,27 @@ async def _is_session_file(file: typing.Any) -> bool:
     if isinstance(file, (bytes, bytearray)):
         data = bytes(file[:_SESSION_PEEK_BYTES])
 
-    elif isinstance(file, str):
-        # path on disk
+    elif isinstance(file, (str, pathlib.Path)):
         try:
-            import aiofiles
-
-            async with aiofiles.open(file, "rb") as fh:
-                data = await fh.read(_SESSION_PEEK_BYTES)
-        except Exception:
-            return False
-
-    elif isinstance(file, pathlib.Path):
-        try:
-            import aiofiles
-
-            async with aiofiles.open(str(file), "rb") as fh:
-                data = await fh.read(_SESSION_PEEK_BYTES)
-        except Exception:
+            with open(file, "rb") as fh:
+                data = fh.read(_SESSION_PEEK_BYTES)
+        except OSError:
             return False
 
     elif hasattr(file, "read"):
         # sync or async file-like object — peek then seek back
         try:
-            pos = file.tell() if hasattr(file, "tell") else None
-            if asyncio.iscoroutinefunction(file.read):
-                data = await file.read(_SESSION_PEEK_BYTES)
-            else:
-                data = file.read(_SESSION_PEEK_BYTES)
-            # restore stream position so the caller can still read from it
-            if pos is not None and hasattr(file, "seek"):
-                if asyncio.iscoroutinefunction(file.seek):
-                    await file.seek(pos)
-                else:
-                    file.seek(pos)
-        except Exception:
+            if not all(callable(getattr(file, attr, None)) for attr in ("tell", "seek")):
+                return False
+            if callable(getattr(file, "seekable", None)) and not await helpers._maybe_await(file.seekable()):
+                return False
+            pos = await helpers._maybe_await(file.tell())
+        except (OSError, ValueError):
             return False
+        try:
+            data = await helpers._maybe_await(file.read(_SESSION_PEEK_BYTES))
+        finally:
+            await helpers._maybe_await(file.seek(pos))
 
     return data is not None and (
         _session_content_detected(data) or _config_json_content_detected(data)
@@ -947,6 +936,11 @@ class UploadMethods:
 
         pos = 0
         async with helpers._FileStream(file, file_size=file_size) as stream:
+            prefix = await helpers._maybe_await(stream.read(_SESSION_PEEK_BYTES))
+            if not isinstance(prefix, bytes):
+                raise TypeError("file descriptor must return bytes")
+            if _session_content_detected(prefix) or _config_json_content_detected(prefix):
+                return "Session detected! Refused."
             # Opening the stream will determine the correct file size
             file_size = stream.file_size
 
@@ -991,7 +985,13 @@ class UploadMethods:
             pos = 0
             for part_index in range(part_count):
                 # Read the file by in chunks of size part_size
-                part = await helpers._maybe_await(stream.read(part_size))
+                part = prefix[:part_size]
+                prefix = prefix[part_size:]
+                if len(part) < part_size:
+                    chunk = await helpers._maybe_await(stream.read(part_size - len(part)))
+                    if not isinstance(chunk, bytes):
+                        raise TypeError("file descriptor must return bytes")
+                    part += chunk
 
                 if not isinstance(part, bytes):
                     raise TypeError(

@@ -14,6 +14,7 @@ class IntermediatePacketCodec(PacketCodec):
 
     async def read_packet(self, reader):
         length = struct.unpack("<i", await reader.readexactly(4))[0]
+        self._check_packet_length(length)
         return await reader.readexactly(length)
 
 

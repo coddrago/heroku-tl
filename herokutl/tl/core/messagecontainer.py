@@ -1,5 +1,6 @@
 from .tlmessage import TLMessage
 from ..tlobject import TLObject
+from ...errors import SecurityError
 
 
 class MessageContainer(TLObject):
@@ -37,12 +38,18 @@ class MessageContainer(TLObject):
     def from_reader(cls, reader):
         # This assumes that .read_* calls are done in the order they appear
         messages = []
-        for _ in range(reader.read_int()):
+        count = reader.read_int()
+        if count < 0 or count > (len(reader.get_bytes()) - reader.tell_position()) // 20:
+            raise SecurityError("Invalid container message count")
+        for _ in range(count):
             msg_id = reader.read_long()
             seq_no = reader.read_int()
             length = reader.read_int()
-            before = reader.tell_position()
-            obj = reader.tgread_object()  # May over-read e.g. RpcResult
-            reader.set_position(before + length)
+            if length < 4 or length % 4:
+                raise SecurityError("Invalid container message length")
+            with type(reader)(reader.read(length)) as inner_reader:
+                obj = inner_reader.tgread_object()
+                if inner_reader.tell_position() != length:
+                    raise SecurityError("Invalid container message boundary")
             messages.append(TLMessage(msg_id, seq_no, obj))
         return MessageContainer(messages)

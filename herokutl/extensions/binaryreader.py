@@ -74,8 +74,8 @@ class BinaryReader:
             self.position += len(result)
         if (length >= 0) and (len(result) != length):
             raise BufferError(
-                "No more data left to read (need {}, got {}: {}); last read {}".format(
-                    length, len(result), repr(result), repr(self._last)
+                "No more data left to read (need {}, got {})".format(
+                    length, len(result)
                 )
             )
 
@@ -96,6 +96,8 @@ class BinaryReader:
         specifying its length.
         """
         first_byte = self.read_byte()
+        if first_byte == 255:
+            raise BufferError("Invalid Telegram byte string length prefix")
         if first_byte == 254:
             length = (
                 self.read_byte() | (self.read_byte() << 8) | (self.read_byte() << 16)

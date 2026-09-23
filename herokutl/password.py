@@ -1,7 +1,8 @@
 import hashlib
 import os
+from functools import lru_cache
+from rsa.prime import miller_rabin_primality_testing
 
-from .crypto import factorization
 from .tl import types
 
 
@@ -13,10 +14,6 @@ def check_prime_and_good_check(prime: int, g: int):
                 prime.bit_length(), good_prime_bits_count
             )
         )
-
-    # TODO This is awfully slow
-    if factorization.Factorization.factorize(prime)[0] != 1:
-        raise ValueError('given "prime" is not prime')
 
     if g == 2:
         if prime % 8 != 7:
@@ -38,14 +35,20 @@ def check_prime_and_good_check(prime: int, g: int):
     else:
         raise ValueError("bad g {}".format(g))
 
+    if not prime & 1 or not miller_rabin_primality_testing(prime, 32):
+        raise ValueError('given "prime" is not prime')
+
     prime_sub1_div2 = (prime - 1) // 2
-    if factorization.Factorization.factorize(prime_sub1_div2)[0] != 1:
+    if not prime_sub1_div2 & 1 or not miller_rabin_primality_testing(prime_sub1_div2, 32):
         raise ValueError("(prime - 1) // 2 is not prime")
 
     # Else it's good
 
 
+@lru_cache(maxsize=16)
 def check_prime_and_good(prime_bytes: bytes, g: int):
+    if len(prime_bytes) != 256:
+        raise ValueError("DH prime must contain exactly 256 bytes")
     good_prime = bytes(
         (
             0xC7,

@@ -11,7 +11,7 @@ class Factorization:
     """
 
     @classmethod
-    def factorize(cls, pq):
+    def factorize(cls, pq, max_steps=1_000_000):
         """
         Factorizes the given large integer.
 
@@ -20,22 +20,31 @@ class Factorization:
         :param pq: the prime pair pq.
         :return: a tuple containing the two factors p and q.
         """
+        if pq < 4:
+            raise ValueError("pq must be composite")
         if pq % 2 == 0:
             return 2, pq // 2
 
         y, c, m = randint(1, pq - 1), randint(1, pq - 1), randint(1, pq - 1)
         g = r = q = 1
         x = ys = 0
+        steps = 0
 
         while g == 1:
             x = y
             for i in range(r):
+                steps += 1
+                if steps > max_steps:
+                    raise ValueError("Factorization work limit exceeded")
                 y = (pow(y, 2, pq) + c) % pq
 
             k = 0
             while k < r and g == 1:
                 ys = y
                 for i in range(min(m, r - k)):
+                    steps += 1
+                    if steps > max_steps:
+                        raise ValueError("Factorization work limit exceeded")
                     y = (pow(y, 2, pq) + c) % pq
                     q = q * (abs(x - y)) % pq
 
@@ -46,6 +55,9 @@ class Factorization:
 
         if g == pq:
             while True:
+                steps += 1
+                if steps > max_steps:
+                    raise ValueError("Factorization work limit exceeded")
                 ys = (pow(ys, 2, pq) + c) % pq
                 g = cls.gcd(abs(x - ys), pq)
                 if g > 1:

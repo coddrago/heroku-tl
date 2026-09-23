@@ -3,12 +3,28 @@ try:
 except ImportError:
     import gzip
 import struct
+import zlib
 
 from .. import TLObject
+from ...errors import SecurityError
 
 
 class GzipPacked(TLObject):
     CONSTRUCTOR_ID = 0x3072CFA1
+    MAX_UNPACKED_SIZE = 16 * 1024 * 1024
+
+    @classmethod
+    def _decompress(cls, data):
+        unpacker = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        try:
+            result = unpacker.decompress(data, cls.MAX_UNPACKED_SIZE + 1)
+        except zlib.error as e:
+            raise SecurityError("Invalid gzip payload") from e
+        if len(result) > cls.MAX_UNPACKED_SIZE or unpacker.unconsumed_tail:
+            raise SecurityError("Gzip payload exceeds the unpacked size limit")
+        if not unpacker.eof or unpacker.unused_data:
+            raise SecurityError("Invalid gzip payload boundary")
+        return result
 
     def __init__(self, data):
         self.data = data
@@ -35,12 +51,13 @@ class GzipPacked(TLObject):
     @staticmethod
     def read(reader):
         constructor = reader.read_int(signed=False)
-        assert constructor == GzipPacked.CONSTRUCTOR_ID
-        return gzip.decompress(reader.tgread_bytes())
+        if constructor != GzipPacked.CONSTRUCTOR_ID:
+            raise SecurityError("Invalid gzip constructor")
+        return GzipPacked._decompress(reader.tgread_bytes())
 
     @classmethod
     def from_reader(cls, reader):
-        return GzipPacked(gzip.decompress(reader.tgread_bytes()))
+        return cls(cls._decompress(reader.tgread_bytes()))
 
     def to_dict(self):
         return {"_": "GzipPacked", "data": self.data}

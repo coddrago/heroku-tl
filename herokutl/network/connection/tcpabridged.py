@@ -17,10 +17,14 @@ class AbridgedPacketCodec(PacketCodec):
 
     async def read_packet(self, reader):
         length = struct.unpack("<B", await reader.readexactly(1))[0]
+        if length > 127:
+            raise BufferError("Invalid abridged packet header")
         if length >= 127:
             length = struct.unpack("<i", await reader.readexactly(3) + b"\0")[0]
 
-        return await reader.readexactly(length << 2)
+        length <<= 2
+        self._check_packet_length(length)
+        return await reader.readexactly(length)
 
 
 class ConnectionTcpAbridged(Connection):

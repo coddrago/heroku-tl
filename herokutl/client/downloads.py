@@ -5,6 +5,7 @@ import pathlib
 import typing
 import inspect
 import asyncio
+import ipaddress
 
 from ..crypto import AES
 
@@ -14,8 +15,36 @@ from ..tl import TLObject, types, functions
 
 try:
     import aiohttp
+    from yarl import URL
 except ImportError:
     aiohttp = None
+
+
+def _check_web_address(host):
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return
+    address = getattr(address, "ipv4_mapped", None) or address
+    if not address.is_global or address.is_multicast:
+        raise ValueError("Web documents must use public network addresses")
+
+
+def _validate_web_url(url):
+    url = URL(url)
+    if url.scheme not in ("http", "https") or not url.host or url.user is not None:
+        raise ValueError("Invalid web document URL")
+    _check_web_address(url.host)
+    return url
+
+
+if aiohttp:
+    class _WebDocumentResolver(aiohttp.resolver.ThreadedResolver):
+        async def resolve(self, host, port=0, family=0):
+            results = await super().resolve(host, port, family)
+            for result in results:
+                _check_web_address(result["host"])
+            return results
 
 if typing.TYPE_CHECKING:
     from .telegramclient import TelegramClient
@@ -1064,7 +1093,7 @@ class DownloadMethods:
                 "dependency install it (pip install aiohttp)"
             )
 
-        # TODO Better way to get opened handles of files and auto-close
+        url = _validate_web_url(web.url)
         kind, possible_names = cls._get_kind_and_names(web.attributes)
         file = cls._get_proper_filename(
             file, kind, utils.get_extension(web), possible_names=possible_names
@@ -1077,20 +1106,33 @@ class DownloadMethods:
             f = open(file, "wb")
 
         try:
-            async with aiohttp.ClientSession() as session:
-                # TODO Use progress_callback; get content length from response
-                # https://github.com/telegramdesktop/tdesktop/blob/c7e773dd9aeba94e2be48c032edc9a78bb50234e/Telegram/SourceFiles/ui/images.cpp#L1318-L1319
-                async with session.get(web.url) as response:
-                    while True:
-                        chunk = await response.content.read(128 * 1024)
-                        if not chunk:
+            resolver = _WebDocumentResolver()
+            try:
+                connector = aiohttp.TCPConnector(resolver=resolver)
+                async with aiohttp.ClientSession(connector=connector) as session:
+                    for redirect in range(6):
+                        async with session.get(url, allow_redirects=False) as response:
+                            if response.status in (301, 302, 303, 307, 308):
+                                location = response.headers.get("Location")
+                                if not location or redirect == 5:
+                                    raise ValueError("Invalid web document redirect")
+                                url = _validate_web_url(url.join(URL(location)))
+                                continue
+                            response.raise_for_status()
+                            if response.status != 200:
+                                raise ValueError("Invalid web document response")
+                            while True:
+                                chunk = await response.content.read(128 * 1024)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
                             break
-                        f.write(chunk)
+            finally:
+                await resolver.close()
+            return f.getvalue() if file is bytes else file
         finally:
             if f != file:
                 f.close()
-
-        return f.getvalue() if file is bytes else file
 
     @staticmethod
     def _get_proper_filename(file, kind, extension, date=None, possible_names=None):

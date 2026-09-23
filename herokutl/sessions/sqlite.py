@@ -1,5 +1,6 @@
 import datetime
 import os
+import stat
 import time
 
 from ..tl import types
@@ -286,6 +287,23 @@ class SQLiteSession(MemorySession):
     def _cursor(self):
         """Asserts that the connection is open and returns a cursor"""
         if self._conn is None:
+            if self.filename != ":memory:":
+                flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+                for suffix in ("", "-journal", "-wal", "-shm"):
+                    filename = self.filename + suffix
+                    try:
+                        fd = os.open(filename, flags | (os.O_CREAT if not suffix else 0), 0o600)
+                    except FileNotFoundError:
+                        if suffix:
+                            continue
+                        raise
+                    try:
+                        if not stat.S_ISREG(os.fstat(fd).st_mode):
+                            raise ValueError("Session storage must be a regular file")
+                        if os.name == "posix":
+                            os.fchmod(fd, 0o600)
+                    finally:
+                        os.close(fd)
             self._conn = sqlite3.connect(self.filename, check_same_thread=False)
         return self._conn.cursor()
 

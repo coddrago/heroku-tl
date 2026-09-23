@@ -429,6 +429,11 @@ class PacketCodec(abc.ABC):
     signal which protocol will be used
     """
     tag = None
+    MAX_PACKET_SIZE = 16 * 1024 * 1024
+
+    def _check_packet_length(self, length):
+        if not 4 <= length <= self.MAX_PACKET_SIZE:
+            raise BufferError("Invalid transport packet length: {}".format(length))
 
     def __init__(self, connection):
         """

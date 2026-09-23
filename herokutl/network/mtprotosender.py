@@ -621,9 +621,9 @@ class MTProtoSender:
             except TypeNotFoundError as e:
                 # Received object which we don't know how to deserialize
                 self._log.info(
-                    "Type %08x not found, remaining data %r",
+                    "Type %08x not found, remaining byte count %d",
                     e.invalid_constructor_id,
-                    e.remaining,
+                    len(e.remaining),
                 )
                 continue
             except SecurityError as e:
@@ -722,7 +722,7 @@ class MTProtoSender:
                             raise ValueError("Not an upload.File")
                 except (TypeNotFoundError, ValueError):
                     self._log.info(
-                        "Received response without parent request: %s", rpc_result.body
+                        "Received response without parent request (%d bytes)", len(rpc_result.body)
                     )
             return
 

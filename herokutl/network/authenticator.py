@@ -6,6 +6,8 @@ with Telegram's servers, effectively creating an authorization key.
 import os
 import time
 from hashlib import sha1
+from hmac import compare_digest
+from rsa.prime import miller_rabin_primality_testing
 
 from ..tl.types import (
     ResPQ,
@@ -18,7 +20,7 @@ from ..tl.types import (
     DhGenRetry,
     DhGenFail,
 )
-from .. import helpers
+from .. import helpers, password
 from ..crypto import AES, AuthKey, Factorization, rsa
 from ..errors import SecurityError
 from ..extensions import BinaryReader
@@ -39,15 +41,27 @@ async def do_authentication(sender):
     # Step 1 sending: PQ Request, endianness doesn't matter since it's random
     nonce = int.from_bytes(os.urandom(16), "big", signed=True)
     res_pq = await sender.send(ReqPqMultiRequest(nonce))
-    assert isinstance(res_pq, ResPQ), "Step 1 answer was %s" % res_pq
+    if not isinstance(res_pq, ResPQ):
+        raise SecurityError("Step 1 unexpected response type")
 
     if res_pq.nonce != nonce:
         raise SecurityError("Step 1 invalid nonce from server")
 
-    pq = get_int(res_pq.pq)
+    if not 1 <= len(res_pq.pq) <= 8:
+        raise SecurityError("Step 1 invalid pq size")
+    pq = get_int(res_pq.pq, signed=False)
+    if pq <= 3 or pq >= 2 ** 63 or not pq & 1:
+        raise SecurityError("Step 1 invalid pq value")
+    if miller_rabin_primality_testing(pq, 16):
+        raise SecurityError("Step 1 pq must be composite")
 
     # Step 2 sending: DH Exchange
-    p, q = Factorization.factorize(pq)
+    try:
+        p, q = Factorization.factorize(pq)
+    except ValueError as e:
+        raise SecurityError("Step 1 invalid pq factors") from e
+    if not (1 < p < q and p * q == pq):
+        raise SecurityError("Step 1 invalid pq factors")
     p, q = rsa.get_byte_array(p), rsa.get_byte_array(q)
     new_nonce = int.from_bytes(os.urandom(32), "little", signed=True)
 
@@ -96,9 +110,8 @@ async def do_authentication(sender):
         )
     )
 
-    assert isinstance(server_dh_params, (ServerDHParamsOk, ServerDHParamsFail)), (
-        "Step 2.1 answer was %s" % server_dh_params
-    )
+    if not isinstance(server_dh_params, (ServerDHParamsOk, ServerDHParamsFail)):
+        raise SecurityError("Step 2.1 unexpected response type")
 
     if server_dh_params.nonce != res_pq.nonce:
         raise SecurityError("Step 2 invalid nonce from server")
@@ -115,24 +128,27 @@ async def do_authentication(sender):
         if server_dh_params.new_nonce_hash != nnh:
             raise SecurityError("Step 2 invalid DH fail nonce from server")
 
-    assert isinstance(server_dh_params, ServerDHParamsOk), (
-        "Step 2.2 answer was %s" % server_dh_params
-    )
+    if not isinstance(server_dh_params, ServerDHParamsOk):
+        raise SecurityError("Step 2 server rejected DH parameters")
 
     # Step 3 sending: Complete DH Exchange
     key, iv = helpers.generate_key_data_from_nonce(res_pq.server_nonce, new_nonce)
-    if len(server_dh_params.encrypted_answer) % 16 != 0:
+    if not 32 <= len(server_dh_params.encrypted_answer) <= 1024 or len(server_dh_params.encrypted_answer) % 16 != 0:
         # See PR#453
         raise SecurityError("Step 3 AES block size mismatch")
 
     plain_text_answer = AES.decrypt_ige(server_dh_params.encrypted_answer, key, iv)
 
     with BinaryReader(plain_text_answer) as reader:
-        reader.read(20)  # hash sum
+        answer_hash = reader.read(20)
         server_dh_inner = reader.tgread_object()
-        assert isinstance(server_dh_inner, ServerDHInnerData), (
-            "Step 3 answer was %s" % server_dh_inner
-        )
+        if not isinstance(server_dh_inner, ServerDHInnerData):
+            raise SecurityError("Step 3 unexpected response type")
+        answer_end = reader.tell_position()
+        if not 0 <= len(plain_text_answer) - answer_end <= 15:
+            raise SecurityError("Step 3 invalid answer padding")
+        if not compare_digest(answer_hash, sha1(plain_text_answer[20:answer_end]).digest()):
+            raise SecurityError("Step 3 invalid answer hash")
 
     if server_dh_inner.nonce != res_pq.nonce:
         raise SecurityError("Step 3 Invalid nonce in encrypted answer")
@@ -140,14 +156,16 @@ async def do_authentication(sender):
     if server_dh_inner.server_nonce != res_pq.server_nonce:
         raise SecurityError("Step 3 Invalid server nonce in encrypted answer")
 
+    try:
+        password.check_prime_and_good(server_dh_inner.dh_prime, server_dh_inner.g)
+    except ValueError as e:
+        raise SecurityError("Step 3 invalid DH prime or generator") from e
+    if not 1 <= len(server_dh_inner.g_a) <= 256:
+        raise SecurityError("Step 3 invalid g_a size")
     dh_prime = get_int(server_dh_inner.dh_prime, signed=False)
     g = server_dh_inner.g
     g_a = get_int(server_dh_inner.g_a, signed=False)
     time_offset = server_dh_inner.server_time - int(time.time())
-
-    b = get_int(os.urandom(256), signed=False)
-    g_b = pow(g, b, dh_prime)
-    gab = pow(g_a, b, dh_prime)
 
     # IMPORTANT: Apart from the conditions on the Diffie-Hellman prime
     # dh_prime and generator g, both sides are to check that g, g_a and
@@ -161,12 +179,13 @@ async def do_authentication(sender):
     if not (1 < g_a < (dh_prime - 1)):
         raise SecurityError("g_a is not within (1, dh_prime - 1)")
 
-    if not (1 < g_b < (dh_prime - 1)):
-        raise SecurityError("g_b is not within (1, dh_prime - 1)")
-
     safety_range = 2 ** (2048 - 64)
     if not (safety_range <= g_a <= (dh_prime - safety_range)):
         raise SecurityError("g_a is not within (2^{2048-64}, dh_prime - 2^{2048-64})")
+
+    b = get_int(os.urandom(256), signed=False)
+    g_b = pow(g, b, dh_prime)
+    gab = pow(g_a, b, dh_prime)
 
     if not (safety_range <= g_b <= (dh_prime - safety_range)):
         raise SecurityError("g_b is not within (2^{2048-64}, dh_prime - 2^{2048-64})")
@@ -196,7 +215,8 @@ async def do_authentication(sender):
     )
 
     nonce_types = (DhGenOk, DhGenRetry, DhGenFail)
-    assert isinstance(dh_gen, nonce_types), "Step 3.1 answer was %s" % dh_gen
+    if not isinstance(dh_gen, nonce_types):
+        raise SecurityError("Step 3.1 unexpected response type")
     name = dh_gen.__class__.__name__
     if dh_gen.nonce != res_pq.nonce:
         raise SecurityError("Step 3 invalid {} nonce from server".format(name))
@@ -204,7 +224,7 @@ async def do_authentication(sender):
     if dh_gen.server_nonce != res_pq.server_nonce:
         raise SecurityError("Step 3 invalid {} server nonce from server".format(name))
 
-    auth_key = AuthKey(rsa.get_byte_array(gab))
+    auth_key = AuthKey(gab.to_bytes(256, "big"))
     nonce_number = 1 + nonce_types.index(type(dh_gen))
     new_nonce_hash = auth_key.calc_new_nonce_hash(new_nonce, nonce_number)
 
@@ -213,7 +233,7 @@ async def do_authentication(sender):
         raise SecurityError("Step 3 invalid new nonce hash")
 
     if not isinstance(dh_gen, DhGenOk):
-        raise AssertionError("Step 3.2 answer was %s" % dh_gen)
+        raise SecurityError("Step 3 DH exchange did not complete")
 
     return auth_key, time_offset
 
