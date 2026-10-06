@@ -39,7 +39,9 @@ FORBIDDEN_CONSTRUCTORS = frozenset({
     0x9FAB0D1A,  # auth.resetAuthorizations
     0xA929597A,  # account.getAuthorizationForm (current)
     0xB86BA8E1,  # account.getAuthorizationForm (legacy, bot_id:int variant)
-    0xE320C158,  # account.getAuthorizations
+    0xDF77F3BC,  # account.resetAuthorization
+    0xF3ED4C73,  # account.acceptAuthorization (current)
+    0xE7027C94,  # account.acceptAuthorization (legacy, bot_id:int variant)
     0xF8654027,  # contacts.exportContactToken
 })
 
