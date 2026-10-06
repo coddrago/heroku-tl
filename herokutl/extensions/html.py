@@ -1,43 +1,30 @@
 """
 Simple HTML -> Telegram entity parser.
 """
-
-import re
-import datetime
 from collections import deque
 from html import escape
 from html.parser import HTMLParser
-from typing import Optional, Tuple, List, Generator, List, Optional, cast
-from abc import ABC, abstractmethod
+import datetime
+from typing import Iterable, Tuple, List
 
-from .. import helpers
+from ..helpers import add_surrogate, del_surrogate, within_surrogate, strip_text
+from ..tl import TLObject
 from ..tl.types import (
-    MessageEntityBold,
-    MessageEntityItalic,
-    MessageEntityCode,
-    MessageEntityPre,
-    MessageEntityEmail,
-    MessageEntityUrl,
-    MessageEntityTextUrl,
-    MessageEntityMentionName,
-    MessageEntityUnderline,
-    MessageEntityStrike,
-    MessageEntityBlockquote,
-    MessageEntityCustomEmoji,
-    TypeMessageEntity,
-    MessageEntitySpoiler,
-    MessageEntityFormattedDate,
+    MessageEntityBold, MessageEntityItalic, MessageEntityCode,
+    MessageEntityPre, MessageEntityEmail, MessageEntityUrl,
+    MessageEntityTextUrl, MessageEntityMentionName,
+    MessageEntityUnderline, MessageEntityStrike, MessageEntityBlockquote,
+    MessageEntityCustomEmoji, MessageEntitySpoiler, MessageEntityFormattedDate,
+    TypeMessageEntity
 )
 
-
-_add_surrogate = helpers.add_surrogate
-_del_surrogate = helpers.del_surrogate
+CUSTOM_EMOJIS = True  # Can be disabled externally
 
 
 class HTMLToTelegramParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.text = ""
+        self.text = ''
         self.entities = []
         self._building_entities = {}
         self._open_tags = deque()
@@ -50,21 +37,21 @@ class HTMLToTelegramParser(HTMLParser):
         attrs = dict(attrs)
         EntityType = None
         args = {}
-        if tag == "strong" or tag == "b":
+        if tag == 'strong' or tag == 'b':
             EntityType = MessageEntityBold
-        elif tag == "em" or tag == "i":
+        elif tag == 'em' or tag == 'i':
             EntityType = MessageEntityItalic
-        elif tag in ["tg-spoiler"]:
+        elif tag == 'tg-spoiler':
             EntityType = MessageEntitySpoiler
-        elif tag == "u":
+        elif tag == 'u':
             EntityType = MessageEntityUnderline
-        elif tag == "del" or tag == "s":
+        elif tag == 'del' or tag == 's':
             EntityType = MessageEntityStrike
-        elif tag == "blockquote":
+        elif tag == 'blockquote':
             EntityType = MessageEntityBlockquote
-            if "expandable" in attrs:
-                args["collapsed"] = True
-        elif tag == "code":
+            if 'expandable' in attrs:
+                args['collapsed'] = True
+        elif tag == 'code':
             try:
                 # If we're in the middle of a <pre> tag, this <code> tag is
                 # probably intended for syntax highlighting.
@@ -72,72 +59,70 @@ class HTMLToTelegramParser(HTMLParser):
                 # Syntax highlighting is set with
                 #     <code class='language-...'>codeblock</code>
                 # inside <pre> tags
-                pre = self._building_entities["pre"]
+                pre = self._building_entities['pre']
                 try:
-                    pre.language = attrs["class"][len("language-") :]
+                    pre.language = attrs['class'][len('language-'):]
                 except KeyError:
                     pass
             except KeyError:
                 EntityType = MessageEntityCode
-        elif tag == "pre":
+        elif tag == 'pre':
             EntityType = MessageEntityPre
-            args["language"] = ""
-        elif tag == "a":
+            args['language'] = ''
+        elif tag == 'a':
             try:
-                url = attrs["href"]
+                url = attrs['href']
             except KeyError:
                 return
-            if url.startswith("mailto:"):
-                url = url[len("mailto:") :]
+            if url.startswith('mailto:'):
+                url = url[len('mailto:'):]
                 EntityType = MessageEntityEmail
             else:
                 if self.get_starttag_text() == url:
                     EntityType = MessageEntityUrl
                 else:
                     EntityType = MessageEntityTextUrl
-                    args["url"] = _del_surrogate(url)
+                    args['url'] = del_surrogate(url)
                     url = None
             self._open_tags_meta.popleft()
             self._open_tags_meta.appendleft(url)
-        elif tag == "tg-emoji":
+        elif tag == 'tg-emoji':
             try:
-                emoji_id = int(attrs["emoji-id"])
+                emoji_id = int(attrs['emoji-id'])
             except (KeyError, ValueError):
                 return
 
             EntityType = MessageEntityCustomEmoji
-            args["document_id"] = emoji_id
-        elif tag == "emoji" and CUSTOM_EMOJIS:
-            EntityType = MessageEntityCustomEmoji
-            args["document_id"] = int(attrs["document_id"])
-        elif tag == "date":
-            EntityType = MessageEntityFormattedDate
+            args['document_id'] = emoji_id
+        elif tag == 'emoji' and CUSTOM_EMOJIS:
             try:
-                if isinstance(attrs["date"], str):
-                    date = datetime.datetime.fromisoformat(attrs["date"])
-                else:
-                    return
-                args["date"] = date
+                emoji_id = int(attrs['document_id'])
             except (KeyError, ValueError):
                 return
-            args["relative"] = "relative" in attrs
-            args["short_time"] = "short-time" in attrs
-            args["long_time"] = "long-time" in attrs
-            args["short_date"] = "short-date" in attrs
-            args["long_date"] = "long-date" in attrs
-            args["day_of_week"] = "day-of-week" in attrs
+
+            EntityType = MessageEntityCustomEmoji
+            args['document_id'] = emoji_id
+        elif tag == 'date':
+            try:
+                args['date'] = datetime.datetime.fromisoformat(attrs['date'])
+            except (KeyError, ValueError):
+                return
+
+            EntityType = MessageEntityFormattedDate
+            for flag in ('relative', 'short_time', 'long_time', 'short_date',
+                         'long_date', 'day_of_week'):
+                args[flag] = flag.replace('_', '-') in attrs
 
         if EntityType and tag not in self._building_entities:
             self._building_entities[tag] = EntityType(
                 offset=len(self.text),
                 # The length will be determined when closing the tag.
                 length=0,
-                **args,
-            )
+                **args)
 
     def handle_data(self, text):
-        previous_tag = self._open_tags[0] if len(self._open_tags) > 0 else ""
-        if previous_tag == "a":
+        previous_tag = self._open_tags[0] if len(self._open_tags) > 0 else ''
+        if previous_tag == 'a':
             url = self._open_tags_meta[0]
             if url:
                 text = url
@@ -170,258 +155,84 @@ def parse(html: str) -> Tuple[str, List[TypeMessageEntity]]:
         return html, []
 
     parser = HTMLToTelegramParser()
-    parser.feed(_add_surrogate(html))
-    text = helpers.strip_text(parser.text, parser.entities)
-    return _del_surrogate(text), parser.entities
+    parser.feed(add_surrogate(html))
+    text = strip_text(parser.text, parser.entities)
+    parser.entities.reverse()
+    parser.entities.sort(key=lambda entity: entity.offset)
+    return del_surrogate(text), parser.entities
 
 
-CUSTOM_EMOJIS = True  # Can be disabled externally
-
-# Based on https://github.com/aiogram/aiogram/blob/c43ff9b6f9dd62cd2d84272e5c460b904b4c3276/aiogram/utils/text_decorations.py
-
-
-class TextDecoration(ABC):
-    def apply_entity(self, entity, text: str) -> str:
-        """
-        Apply single entity to text
-        :param entity:
-        :param text:
-        :return:
-        """
-        entity_map = {
-            MessageEntityBold: "bold",
-            MessageEntityItalic: "italic",
-            MessageEntitySpoiler: "spoiler",
-            MessageEntityCode: "code",
-            MessageEntityUnderline: "underline",
-            MessageEntityStrike: "strikethrough",
-        }
-        if type(entity) in entity_map:
-            if re.match(r"^<emoji document_id=\"?\d+?\"?>[^<]*?<\/emoji>$", text):
-                return text
-
-            return cast(str, getattr(self, entity_map[type(entity)])(value=text))
-        if type(entity) == MessageEntityPre:
-            return (
-                self.pre_language(value=text, language=entity.language)
-                if entity.language
-                else self.pre(value=text)
-            )
-        if type(entity) == MessageEntityMentionName:
-            return self.link(value=text, link=f"tg://user?id={entity.user_id}")
-        if type(entity) == MessageEntityTextUrl:
-            return self.link(value=text, link=cast(str, entity.url))
-        if type(entity) == MessageEntityUrl:
-            return self.link(value=text, link=text)
-        if type(entity) == MessageEntityEmail:
-            return self.link(value=text, link=f"mailto:{text}")
-        if type(entity) == MessageEntityCustomEmoji and CUSTOM_EMOJIS:
-            return self.custom_emoji(value=text, document_id=entity.document_id)
-        if type(entity) == MessageEntityBlockquote:
-            return self.blockquote(value=text, collapsed=bool(entity.collapsed))
-        if type(entity) == MessageEntityFormattedDate:
-            return self.formatted_date(
-                value=text,
-                date=entity.date,
-                relative=entity.relative,
-                short_time=entity.short_time,
-                long_time=entity.long_time,
-                short_date=entity.short_date,
-                long_date=entity.long_date,
-                day_of_week=entity.day_of_week,
-            )
-
-        return self.quote(text)
-
-    def unparse(self, text: str, entities: Optional[list] = None) -> str:
-        """
-        Unparse message entities
-        :param text: raw text
-        :param entities: Array of MessageEntities
-        :return:
-        """
-        return "".join(
-            self._unparse_entities(
-                self._add_surrogates(text),
-                sorted(entities, key=lambda item: item.offset) if entities else [],
-            )
-        )
-
-    def _unparse_entities(
-        self,
-        text: bytes,
-        entities: list,
-        offset: Optional[int] = None,
-        length: Optional[int] = None,
-    ) -> Generator[str, None, None]:
-        if offset is None:
-            offset = 0
-        length = length or len(text)
-
-        for index, entity in enumerate(entities):
-            if entity.offset * 2 < offset:
-                continue
-            if entity.offset * 2 > offset:
-                yield self.quote(
-                    self._remove_surrogates(text[offset : entity.offset * 2])
-                )
-            start = entity.offset * 2
-            offset = entity.offset * 2 + entity.length * 2
-
-            sub_entities = list(
-                filter(lambda e: e.offset * 2 < (offset or 0), entities[index + 1 :])
-            )
-            yield self.apply_entity(
-                entity,
-                "".join(
-                    self._unparse_entities(
-                        text, sub_entities, offset=start, length=offset
-                    )
-                ),
-            )
-
-        if offset < length:
-            yield self.quote(self._remove_surrogates(text[offset:length]))
-
-    @staticmethod
-    def _add_surrogates(text: str):
-        return text.encode("utf-16-le")
-
-    @staticmethod
-    def _remove_surrogates(text: bytes):
-        return text.decode("utf-16-le")
-
-    @abstractmethod
-    def link(self, value: str, link: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def bold(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def italic(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def spoiler(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def code(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def pre(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def pre_language(self, value: str, language: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def underline(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def strikethrough(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def quote(self, value: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def custom_emoji(self, value: str, document_id: str) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def blockquote(
-        self, value: str, collapsed: bool = False
-    ) -> str:  # pragma: no cover
-        pass
-
-    @abstractmethod
-    def formatted_date(
-        self,
-        value: str,
-        date: datetime.datetime,
-        relative: bool = False,
-        short_time: bool = False,
-        long_time: bool = False,
-        short_date: bool = False,
-        long_date: bool = False,
-        day_of_week: bool = False,
-    ) -> str:
-        pass
+ENTITY_TO_FORMATTER = {
+    MessageEntityBold: ('<strong>', '</strong>'),
+    MessageEntityItalic: ('<em>', '</em>'),
+    MessageEntityCode: ('<code>', '</code>'),
+    MessageEntitySpoiler: ('<tg-spoiler>', '</tg-spoiler>'),
+    MessageEntityUnderline: ('<u>', '</u>'),
+    MessageEntityStrike: ('<del>', '</del>'),
+    MessageEntityBlockquote: lambda e, _: (
+        '<blockquote expandable>' if e.collapsed else '<blockquote>',
+        '</blockquote>'
+    ),
+    MessageEntityPre: lambda e, _: (
+        '<pre><code class="language-{}">'.format(escape(e.language)), '</code></pre>'
+    ) if e.language else ('<pre>', '</pre>'),
+    MessageEntityEmail: lambda _, t: ('<a href="mailto:{}">'.format(t), '</a>'),
+    MessageEntityUrl: lambda _, t: ('<a href="{}">'.format(t), '</a>'),
+    MessageEntityTextUrl: lambda e, _: ('<a href="{}">'.format(escape(e.url)), '</a>'),
+    MessageEntityMentionName: lambda e, _: ('<a href="tg://user?id={}">'.format(e.user_id), '</a>'),
+    MessageEntityCustomEmoji: lambda e, _: ('<tg-emoji emoji-id="{}">'.format(e.document_id), '</tg-emoji>'),
+    MessageEntityFormattedDate: lambda e, _: (
+        '<date date="{}"{}>'.format(e.date.isoformat(), ''.join(
+            ' ' + f.replace('_', '-') for f in (
+                'relative', 'short_time', 'long_time', 'short_date',
+                'long_date', 'day_of_week'
+            ) if getattr(e, f, False)
+        )),
+        '</date>'
+    ),
+}
 
 
-class HtmlDecoration(TextDecoration):
-    def link(self, value: str, link: str) -> str:
-        return f'<a href="{link}">{value}</a>'
+def unparse(text: str, entities: Iterable[TypeMessageEntity]) -> str:
+    """
+    Performs the reverse operation to .parse(), effectively returning HTML
+    given a normal text and its MessageEntity's.
 
-    def bold(self, value: str) -> str:
-        return f"<b>{value}</b>"
+    :param text: the text to be reconverted into HTML.
+    :param entities: the MessageEntity's applied to the text.
+    :return: a HTML representation of the combination of both inputs.
+    """
+    if not text:
+        return text
+    elif not entities:
+        return escape(text)
 
-    def italic(self, value: str) -> str:
-        return f"<i>{value}</i>"
+    if isinstance(entities, TLObject):
+        entities = (entities,)
 
-    def spoiler(self, value: str) -> str:
-        return f"<tg-spoiler>{value}</tg-spoiler>"
+    text = add_surrogate(text)
+    insert_at = []
+    for i, entity in enumerate(entities):
+        s = entity.offset
+        e = entity.offset + entity.length
+        delimiter = ENTITY_TO_FORMATTER.get(type(entity), None)
+        if delimiter:
+            if callable(delimiter):
+                delimiter = delimiter(entity, text[s:e])
+            insert_at.append((s, i, delimiter[0]))
+            insert_at.append((e, -i, delimiter[1]))
 
-    def code(self, value: str) -> str:
-        return f"<code>{value}</code>"
+    insert_at.sort(key=lambda t: (t[0], t[1]))
+    next_escape_bound = len(text)
+    while insert_at:
+        # Same logic as markdown.py
+        at, _, what = insert_at.pop()
+        while within_surrogate(text, at):
+            at += 1
 
-    def pre(self, value: str) -> str:
-        return f"<pre>{value}</pre>"
+        text = text[:at] + what + escape(text[at:next_escape_bound]) + text[next_escape_bound:]
+        next_escape_bound = at
 
-    def pre_language(self, value: str, language: str) -> str:
-        return f'<pre><code class="language-{language}">{value}</code></pre>'
+    text = escape(text[:next_escape_bound]) + text[next_escape_bound:]
 
-    def underline(self, value: str) -> str:
-        return f"<u>{value}</u>"
-
-    def strikethrough(self, value: str) -> str:
-        return f"<s>{value}</s>"
-
-    def quote(self, value: str) -> str:
-        return escape(value, quote=False)
-
-    def blockquote(self, value: str, collapsed: bool = False) -> str:
-        if collapsed:
-            return f"<blockquote expandable>{value}</blockquote>"
-        return f"<blockquote>{value}</blockquote>"
-
-    def custom_emoji(self, value: str, document_id: str) -> str:
-        return f"<tg-emoji emoji-id={document_id}>{value}</tg-emoji>"
-
-    def formatted_date(
-        self,
-        value: str,
-        date: datetime.datetime,
-        relative: bool = False,
-        short_time: bool = False,
-        long_time: bool = False,
-        short_date: bool = False,
-        long_date: bool = False,
-        day_of_week: bool = False,
-    ) -> str:
-        date_attrs = f' date="{date.isoformat()}"'
-        if relative:
-            date_attrs += " relative"
-        if short_time:
-            date_attrs += " short-time"
-        if long_time:
-            date_attrs += " long-time"
-        if short_date:
-            date_attrs += " short-date"
-        if long_date:
-            date_attrs += " long-date"
-        if day_of_week:
-            date_attrs += " day-of-week"
-
-        return f"<date{date_attrs}>{value}</date>"
-
-
-html_decoration = HtmlDecoration()
-unparse = html_decoration.unparse
+    return del_surrogate(text)
