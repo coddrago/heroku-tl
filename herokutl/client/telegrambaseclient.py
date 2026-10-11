@@ -661,7 +661,15 @@ class TelegramBaseClient(abc.ABC):
 
         self._updates_handle = self.loop.create_task(self._update_loop())
         self._keepalive_handle = self.loop.create_task(self._keepalive_loop())
-        self._appconfig_handle = self.loop.create_task(self.appconfig._refresh_loop())
+
+        if self._authorized is True or not self._message_box.is_empty():
+            self._start_appconfig()
+
+    def _start_appconfig(self: "TelegramClient"):
+        if self._appconfig_handle is None or self._appconfig_handle.done():
+            self._appconfig_handle = self.loop.create_task(
+                self.appconfig._refresh_loop()
+            )
 
     def is_connected(self: "TelegramClient") -> bool:
         """

@@ -432,6 +432,7 @@ class AuthMethods:
             [],
         )
 
+        self._start_appconfig()
         return user
 
     async def send_code_request(

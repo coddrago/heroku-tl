@@ -2,6 +2,7 @@ import asyncio
 import time
 import typing
 
+from .. import errors
 from ..tl import functions, types
 
 if typing.TYPE_CHECKING:
@@ -55,6 +56,8 @@ class AppConfig:
             try:
                 await self.get(force=True)
             except (ConnectionError, asyncio.CancelledError):
+                return
+            except errors.BotMethodInvalidError:
                 return
             except Exception:
                 self._client._log[__name__].exception(
