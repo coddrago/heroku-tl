@@ -265,6 +265,9 @@ class UpdateMethods:
 
     # region Private methods
 
+    def _get_difference_timeout(self: "TelegramClient") -> float:
+        return max(90, self.flood_sleep_threshold + 30)
+
     async def _update_loop(self: "TelegramClient"):
         # If the MessageBox is not empty, the account had to be logged-in to fill in its state.
         # This flag is used to propagate the "you got logged-out" error up (but getting logged-out
@@ -323,7 +326,9 @@ class UpdateMethods:
                 if get_diff:
                     self._log[__name__].debug("Getting difference for account updates")
                     try:
-                        diff = await self(get_diff)
+                        diff = await asyncio.wait_for(
+                            self(get_diff), self._get_difference_timeout()
+                        )
                     except (
                         errors.ServerError,
                         errors.TimedOutError,
@@ -368,6 +373,13 @@ class UpdateMethods:
                         )
                         self._message_box.end_difference()
                         continue
+                    except asyncio.TimeoutError:
+                        self._log[__name__].warning(
+                            "Timed out getting difference for account updates;"
+                            " ending it and retrying on the next deadline"
+                        )
+                        self._message_box.end_difference()
+                        continue
                     except OSError as e:
                         # Network is likely down, but it's unclear for how long.
                         # If disconnect is called this task will be cancelled along with the sleep.
@@ -400,7 +412,9 @@ class UpdateMethods:
                         get_diff.channel.channel_id,
                     )
                     try:
-                        diff = await self(get_diff)
+                        diff = await asyncio.wait_for(
+                            self(get_diff), self._get_difference_timeout()
+                        )
                     except (errors.UnauthorizedError, errors.AuthKeyError) as e:
                         # Not logged in or broken authorization key, can't get difference
                         self._log[__name__].warning(
@@ -487,6 +501,18 @@ class UpdateMethods:
                             f"in Telethon v{__version__} in that it could be handled better, but it's unlikely): %s",
                             get_diff.channel.channel_id,
                             e,
+                        )
+                        self._message_box.end_channel_difference(
+                            get_diff,
+                            PrematureEndReason.TEMPORARY_SERVER_ISSUES,
+                            self._mb_entity_cache,
+                        )
+                        continue
+                    except asyncio.TimeoutError:
+                        self._log[__name__].warning(
+                            "Timed out getting difference for channel %d;"
+                            " ending it prematurely and retrying on the next deadline",
+                            get_diff.channel.channel_id,
                         )
                         self._message_box.end_channel_difference(
                             get_diff,

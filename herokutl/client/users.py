@@ -73,7 +73,12 @@ class UserMethods:
     async def __call__(
         self: "TelegramClient", request, ordered=False, flood_sleep_threshold=None
     ):
-        return await self._call(self._sender, request, ordered=ordered)
+        return await self._call(
+            self._sender,
+            request,
+            ordered=ordered,
+            flood_sleep_threshold=flood_sleep_threshold,
+        )
 
     async def _call(
         self: "TelegramClient",
