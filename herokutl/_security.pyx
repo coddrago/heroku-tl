@@ -43,6 +43,15 @@ FORBIDDEN_CONSTRUCTORS = frozenset({
     0xF3ED4C73,  # account.acceptAuthorization (current)
     0xE7027C94,  # account.acceptAuthorization (legacy, bot_id:int variant)
     0xF8654027,  # contacts.exportContactToken
+    0xD9E5D9E2,  # wallet.sendTransfer
+    0x9077C9AC,  # wallet.exportSecretPhrase
+    0xF53925CF,  # wallet.fetchEncryptedSecretPhrasePart
+    0xD8C72EEC,  # wallet.replaceWallet
+    0x0B0BF0DA,  # wallet.disableBackup
+    0x4500C525,  # wallet.enableBackup
+    0xC2C00779,  # wallet.tonConnectSubmitConnectResult
+    0x66B57B41,  # wallet.tonConnectClaimRequest
+    0xFAC67D3C,  # wallet.tonConnectSubmitResponse
 })
 
 
