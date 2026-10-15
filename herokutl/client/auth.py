@@ -216,9 +216,19 @@ class AuthMethods:
             except errors.SessionPasswordNeededError:
                 two_step_detected = True
                 break
+            except errors.PhoneCodeExpiredError:
+                try:
+                    await self.send_code_request(phone, force_sms=force_sms)
+                except errors.RPCError:
+                    print("Invalid code. Please try again.", file=sys.stderr)
+                else:
+                    print(
+                        "The code has expired. A new code has been sent, "
+                        "please enter it.",
+                        file=sys.stderr,
+                    )
             except (
                 errors.PhoneCodeEmptyError,
-                errors.PhoneCodeExpiredError,
                 errors.PhoneCodeHashEmptyError,
                 errors.PhoneCodeInvalidError,
             ):
