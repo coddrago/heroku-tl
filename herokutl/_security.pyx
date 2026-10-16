@@ -62,6 +62,94 @@ class SecurityViolation(Exception):
     keep working; see errors/common.py."""
 
 
+cdef unsigned int _SAVE_FILE_PART = 0xB304A621      # upload.saveFilePart
+cdef unsigned int _SAVE_BIG_FILE_PART = 0xDE7B673D  # upload.saveBigFilePart
+cdef unsigned int _INVOKE_AFTER_MSG = 0xCB9F372D    # invokeAfterMsg
+cdef unsigned int _MSG_CONTAINER = 0x73F1F8DC       # msg_container
+
+
+cdef inline unsigned int _u32(const unsigned char[:] buf, Py_ssize_t i):
+    return (
+        (<unsigned int> buf[i])
+        | (<unsigned int> buf[i + 1] << 8)
+        | (<unsigned int> buf[i + 2] << 16)
+        | (<unsigned int> buf[i + 3] << 24)
+    )
+
+
+cdef void _scan(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop) except *:
+    cdef Py_ssize_t i
+    for i in range(start, stop - 3, 4):
+        if _u32(buf, i) in FORBIDDEN_CONSTRUCTORS:
+            raise SecurityViolation(
+                "Usage of a forbidden raw TL constructor is forbidden."
+            )
+
+
+cdef void _scan_body(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop) except *:
+    cdef unsigned int cid
+    cdef Py_ssize_t hdr, payload_start, payload_end, resume
+    cdef unsigned int first
+
+    while stop - start >= 12 and _u32(buf, start) == _INVOKE_AFTER_MSG:
+        _scan(buf, start, start + 12)
+        start += 12
+
+    if stop - start < 4:
+        return
+    cid = _u32(buf, start)
+    if cid == _SAVE_FILE_PART:
+        hdr = start + 16
+    elif cid == _SAVE_BIG_FILE_PART:
+        hdr = start + 20
+    else:
+        _scan(buf, start, stop)
+        return
+
+    if hdr >= stop:
+        _scan(buf, start, stop)
+        return
+    first = buf[hdr]
+    if first < 254:
+        payload_start = hdr + 1
+        payload_end = payload_start + <Py_ssize_t> first
+    elif first == 254 and hdr + 4 <= stop:
+        payload_start = hdr + 4
+        payload_end = payload_start + (
+            <Py_ssize_t> buf[hdr + 1]
+            | (<Py_ssize_t> buf[hdr + 2] << 8)
+            | (<Py_ssize_t> buf[hdr + 3] << 16)
+        )
+    else:
+        _scan(buf, start, stop)
+        return
+    if payload_end > stop:
+        _scan(buf, start, stop)  # malformed: fail closed
+        return
+
+    _scan(buf, start, payload_start)
+    resume = start + ((payload_end - start + 3) // 4) * 4  # skip TL padding
+    _scan(buf, resume, stop)
+
+
+cdef void _scan_messages(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop) except *:
+    cdef Py_ssize_t pos = start, blen, body
+    while pos + 16 <= stop:
+        blen = <Py_ssize_t> (<int> _u32(buf, pos + 12))
+        body = pos + 16
+        if blen < 0 or body + blen > stop:
+            _scan(buf, pos, stop)  # malformed framing: fail closed
+            return
+        if blen >= 8 and _u32(buf, body) == _MSG_CONTAINER:
+            _scan(buf, body, body + 8)
+            pos = body + 8  # inner messages follow back to back
+            continue
+        _scan_body(buf, body, body + blen)
+        pos = body + blen
+    if pos < stop:
+        _scan(buf, pos, stop)
+
+
 cdef class SecurityGate:
     """Non-heap extension type - see module docstring. Do not add any
     Python-level (heap-type) mixins or metaclass tricks to this class, as
@@ -76,18 +164,10 @@ cdef class SecurityGate:
 
     @staticmethod
     def check_serialized(data):
-        cdef Py_ssize_t i, n
-        cdef unsigned int cid
         cdef const unsigned char[:] buf = data
-        n = len(data)
-        for i in range(0, n - 3, 4):
-            cid = (
-                (<unsigned int> buf[i])
-                | (<unsigned int> buf[i + 1] << 8)
-                | (<unsigned int> buf[i + 2] << 16)
-                | (<unsigned int> buf[i + 3] << 24)
-            )
-            if cid in FORBIDDEN_CONSTRUCTORS:
-                raise SecurityViolation(
-                    "Usage of a forbidden raw TL constructor is forbidden."
-                )
+        _scan_body(buf, 0, len(data))
+
+    @staticmethod
+    def check_serialized_batch(data):
+        cdef const unsigned char[:] buf = data
+        _scan_messages(buf, 0, len(data))

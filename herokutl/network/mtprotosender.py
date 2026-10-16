@@ -537,7 +537,7 @@ class MTProtoSender:
                 continue
 
             try:
-                SecurityGate.check_serialized(data)
+                SecurityGate.check_serialized_batch(data)
             except SecurityViolation as e:
                 violation = _scam_detection_error_cls()(str(e))
                 self._log.critical(
