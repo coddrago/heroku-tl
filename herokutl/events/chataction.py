@@ -73,6 +73,10 @@ class ChatAction(EventBuilder):
                 # If a user adds itself, it means they joined via the public chat username
                 added_by = ([msg.sender_id] == action.users) or msg.from_id
                 return cls.Event(msg, added_by=added_by, users=action.users)
+            elif isinstance(action, types.MessageActionChatJoinedByRequest):
+                return cls.Event(msg, added_by=True, users=msg.from_id)
+            elif isinstance(action, types.MessageActionChatJoinedViaCommunity):
+                return cls.Event(msg, added_by=True, users=msg.from_id)
             elif isinstance(action, types.MessageActionChatDeleteUser):
                 return cls.Event(
                     msg,
