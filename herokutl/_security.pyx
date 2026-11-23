@@ -24,6 +24,8 @@ tamper-evidence baseline in tlobject.py additionally fingerprints that
 captured reference, so even that residual seam is caught rather than silent.
 """
 
+import zlib as _zlib
+
 FORBIDDEN_CONSTRUCTORS = frozenset({
     0xA2C0CF74,  # account.deleteAccount (current)
     0x418D4E0B,  # account.deleteAccount (legacy, pre-2FA-password layer)
@@ -66,6 +68,11 @@ cdef unsigned int _SAVE_FILE_PART = 0xB304A621      # upload.saveFilePart
 cdef unsigned int _SAVE_BIG_FILE_PART = 0xDE7B673D  # upload.saveBigFilePart
 cdef unsigned int _INVOKE_AFTER_MSG = 0xCB9F372D    # invokeAfterMsg
 cdef unsigned int _MSG_CONTAINER = 0x73F1F8DC       # msg_container
+cdef unsigned int _GZIP_PACKED = 0x3072CFA1         # gzip_packed
+cdef object _decompressobj = _zlib.decompressobj
+cdef int _GZIP_WBITS = 16 + _zlib.MAX_WBITS
+cdef Py_ssize_t _MAX_INFLATED = 16 * 1024 * 1024    # GzipPacked.MAX_UNPACKED_SIZE
+cdef int _MAX_DEPTH = 3
 
 
 cdef inline unsigned int _u32(const unsigned char[:] buf, Py_ssize_t i):
@@ -86,10 +93,35 @@ cdef void _scan(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop) e
             )
 
 
-cdef void _scan_body(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop) except *:
+cdef bint _tl_bytes_span(const unsigned char[:] buf, Py_ssize_t pos, Py_ssize_t stop,
+                         Py_ssize_t *payload_start, Py_ssize_t *payload_end):
+    cdef unsigned int first
+    if pos >= stop:
+        return False
+    first = buf[pos]
+    if first < 254:
+        payload_start[0] = pos + 1
+        payload_end[0] = pos + 1 + <Py_ssize_t> first
+    elif first == 254 and pos + 4 <= stop:
+        payload_start[0] = pos + 4
+        payload_end[0] = pos + 4 + (
+            <Py_ssize_t> buf[pos + 1]
+            | (<Py_ssize_t> buf[pos + 2] << 8)
+            | (<Py_ssize_t> buf[pos + 3] << 16)
+        )
+    else:
+        return False
+    return payload_end[0] <= stop
+
+
+cdef void _scan_body(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t stop, int depth) except *:
     cdef unsigned int cid
     cdef Py_ssize_t hdr, payload_start, payload_end, resume
-    cdef unsigned int first
+    cdef bytes inflated
+    cdef const unsigned char[:] inner
+
+    if depth > _MAX_DEPTH:
+        raise SecurityViolation("Serialized request is nested too deeply.")
 
     while stop - start >= 12 and _u32(buf, start) == _INVOKE_AFTER_MSG:
         _scan(buf, start, start + 12)
@@ -98,32 +130,35 @@ cdef void _scan_body(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_t st
     if stop - start < 4:
         return
     cid = _u32(buf, start)
+
+    if cid == _GZIP_PACKED:
+        if not _tl_bytes_span(buf, start + 4, stop, &payload_start, &payload_end):
+            _scan(buf, start, stop)  # malformed: fail closed
+            return
+        _scan(buf, start, payload_start)
+        try:
+            decomp = _decompressobj(_GZIP_WBITS)
+            inflated = decomp.decompress(bytes(buf[payload_start:payload_end]), _MAX_INFLATED + 1)
+            oversized = len(inflated) > _MAX_INFLATED or bool(decomp.unconsumed_tail)
+        except Exception:
+            raise SecurityViolation("Malformed gzip_packed payload.") from None
+        if oversized:
+            raise SecurityViolation("gzip_packed payload is too large to inspect.")
+        inner = inflated
+        _scan_body(inner, 0, len(inflated), depth + 1)
+        resume = start + ((payload_end - start + 3) // 4) * 4
+        _scan(buf, resume, stop)
+        return
+
     if cid == _SAVE_FILE_PART:
-        hdr = start + 16
+        hdr = start + 16  # ctor + file_id:long + file_part:int
     elif cid == _SAVE_BIG_FILE_PART:
-        hdr = start + 20
+        hdr = start + 20  # ctor + file_id:long + file_part:int + file_total_parts:int
     else:
         _scan(buf, start, stop)
         return
 
-    if hdr >= stop:
-        _scan(buf, start, stop)
-        return
-    first = buf[hdr]
-    if first < 254:
-        payload_start = hdr + 1
-        payload_end = payload_start + <Py_ssize_t> first
-    elif first == 254 and hdr + 4 <= stop:
-        payload_start = hdr + 4
-        payload_end = payload_start + (
-            <Py_ssize_t> buf[hdr + 1]
-            | (<Py_ssize_t> buf[hdr + 2] << 8)
-            | (<Py_ssize_t> buf[hdr + 3] << 16)
-        )
-    else:
-        _scan(buf, start, stop)
-        return
-    if payload_end > stop:
+    if not _tl_bytes_span(buf, hdr, stop, &payload_start, &payload_end):
         _scan(buf, start, stop)  # malformed: fail closed
         return
 
@@ -144,7 +179,7 @@ cdef void _scan_messages(const unsigned char[:] buf, Py_ssize_t start, Py_ssize_
             _scan(buf, body, body + 8)
             pos = body + 8  # inner messages follow back to back
             continue
-        _scan_body(buf, body, body + blen)
+        _scan_body(buf, body, body + blen, 0)
         pos = body + blen
     if pos < stop:
         _scan(buf, pos, stop)
@@ -165,7 +200,7 @@ cdef class SecurityGate:
     @staticmethod
     def check_serialized(data):
         cdef const unsigned char[:] buf = data
-        _scan_body(buf, 0, len(data))
+        _scan_body(buf, 0, len(data), 0)
 
     @staticmethod
     def check_serialized_batch(data):
